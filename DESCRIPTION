@@ -1,0 +1,21 @@
+Package: simjm
+Type: Package
+Title: Simulate Joint Longitudinal and Survival Data
+Version: 0.0.0
+Authors@R: c(person("Sam", "Brilleman", email = "sam.brilleman@monash.edu", 
+             role = c("cre", "aut", "cph")),
+             person("Trustees of", "Columbia University", role = "cph",
+             comment = c("R/rinvGauss.R")))
+Maintainer: Sam Brilleman <sam.brilleman@monash.edu>
+Description: Simulates data from a joint longitudinal and survival model. The 
+    model can be a univariate (one longitudinal marker) or a multivariate (more
+    than one longitudinal marker) joint model.
+License: GPL (>=3)
+Depends:
+    R (>= 3.3.2)
+Imports:
+    MASS,
+    simsurv (>= 0.0.0)
+Suggests:
+LazyData: true
+RoxygenNote: 6.0.1
