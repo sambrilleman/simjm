@@ -5,7 +5,7 @@ Version: 0.0.0
 Authors@R: c(person("Sam", "Brilleman", email = "sam.brilleman@monash.edu", 
              role = c("cre", "aut", "cph")),
              person("Trustees of", "Columbia University", role = "cph",
-             comment = c("R/rinvGauss.R")))
+             comment = c("R/rstanarm-misc.R")))
 Maintainer: Sam Brilleman <sam.brilleman@monash.edu>
 Description: Simulates data from a joint longitudinal and survival model. The 
     model can be a univariate (one longitudinal marker) or a multivariate (more
