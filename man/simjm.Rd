@@ -10,15 +10,16 @@ simjm(n = 200, M = 3, random_trajectory = "linear", assoc = "etavalue",
   betaEvent_intercept = -11.87, betaEvent_binary = 0.6,
   betaEvent_continuous = 0.08, betaEvent_assoc = 0.01, betaEvent_aux = 2,
   b_sd = c(20, 3), b_rho = 0.5, max_yobs = 8, max_fuptime = 10,
-  family = gaussian, seed = NULL, interval = c(0, 200))
+  family = gaussian, clust_control = list(), seed = NULL,
+  interval = c(0, 200))
 }
 \arguments{
-\item{n}{Number of subjects}
+\item{n}{Number of individuals}
 
 \item{M}{Number of longitudinal markers}
 
 \item{random_trajectory}{The desired type of trajectory in the random effects
-part of the longitudinal model}
+part of the longitudinal model.}
 
 \item{assoc}{The desired type of association structure for the joint model.
 Only one association structure type can be specified. The options are:
@@ -62,20 +63,48 @@ the event submodel (shape parameter for Weibull models). Can be a scalar
 or a vector, depending on how many auxiliary parameters are required for
 specifying the baseline hazard.}
 
-\item{b_sd}{Vector of standard deviations for the random effects.}
+\item{b_sd}{A list, with each element of the list containing the vector of
+standard deviations for the random effects relating to one grouping factor.}
 
-\item{b_rho}{Correlation between the random effects.}
+\item{b_rho}{Correlation between the random effects. This is assumed to be
+the correlation between all random effects within a grouping factor, and
+the same correlation is used for each grouping factor.}
 
 \item{max_yobs}{The maximum allowed number of longitudinal measurements. The
 actual number of observed measurements will depend on the individuals event time.}
 
 \item{max_fuptime}{The maximum follow up time in whatever the desired time
-units are. This time will also be used as the censoring time (i.e. for subjects
-who have a simulated survival time that is after \code{max_fuptime})}
+units are. This time will also be used as the censoring time (i.e. for
+individuals who have a simulated survival time that is after \code{max_fuptime}).}
 
 \item{family}{A family for the the longitudinal submodel, or for a multivariate
 joint model this can be a list of families. See \code{\link[stats]{glm}} and
 \code{\link[stats]{family}}.}
+
+\item{clust_control}{A named list providing the arguments that are
+necessary for simulating data where the first longitudinal submodel has
+lower level clustering within individuals. The named list should contain
+the following elements:
+\itemize{
+\item{L}{Integer specifying the maximum number of lower level units
+clustered within an individual. The actual number of lower level units
+clustered within each individual is taken to be a random uniform (truncated
+to an integer) on the range \code{[1,L+1]}.}
+\item{assoc}{Character string specifying the method for combining information
+across the lower level units clustered within an individual when forming the
+association structure. Can be \code{"sum"} for specifying which indicates
+the association structure should be based on a summation across the lower
+level units clustered within an individual. Can be \code{"mean"} which
+indicates that the association structure should be based on the mean
+(i.e. average) taken across the lower level units clustered within an
+individual.}
+\item{u_sd}{Numeric vector providing the standard deviations of the random
+effect at the cluster level.}
+\item{random_trajectory}{The desired type of trajectory in the random effects
+part of the longitudinal model at the cluster level. Can be \code{"none"} to
+only include a random intercept at the cluster level, or otherwise
+\code{"linear"} or \code{"poly"}.}
+}}
 
 \item{seed}{An optional \code{\link[=set.seed]{seed}}.}
 
@@ -132,5 +161,23 @@ simdat6 <- simjm(M = 1,
                  betaEvent_assoc = 0.05,
                  family = binomial(),
                  betaLong_aux = 1)
+
+# For one longitudinal marker, with lower level clustering
+# within individuals. The model includes only a random intercept
+# at the individual-level, and then a random intercept and
+# random slope at the lower cluster level. The association
+# structure is based on a summation of the expected values for
+# each of the lower level units.
+simdat7 <- simjm(M = 1,
+                 random_trajectory = "none",
+                 b_sd = 10,
+                 betaLong_aux = 6,
+                 betaEvent_assoc = 0.01,
+                 clust_control = list(
+                   L = 8,
+                   assoc = "sum",
+                   random_trajectory = "linear",
+                   u_sd = c(10,3)
+                 ))
 
 }
