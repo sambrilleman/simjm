@@ -56,7 +56,7 @@
 #'   necessary for simulating data where the first longitudinal submodel has
 #'   lower level clustering within individuals. The named list should contain
 #'   the following elements:
-#'   \itemize{
+#'   \describe{
 #'   \item{L}{Integer specifying the maximum number of lower level units
 #'   clustered within an individual. The actual number of lower level units
 #'   clustered within each individual is taken to be a random uniform (truncated
