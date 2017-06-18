@@ -441,6 +441,10 @@ simjm <- function(n = 200, M = 3,
     rownames(x) <- NULL
     return(x)
   })
+  commonids <- ret[[1L]]$id
+  for (i in 1:length(ret))
+    commonids <- intersect(commonids, ret[[i]]$id)
+  ret <- lapply(ret, function(x) x[x$id %in% commonids, , drop = FALSE])
 
   # Store 'true' parameter values
   long_params <- nlist(
@@ -468,7 +472,8 @@ simjm <- function(n = 200, M = 3,
   )
 
   # Return object
-  structure(ret, params = c(long_params, event_params, re_params), n = n, M = M,
+  structure(ret, params = c(long_params, event_params, re_params),
+            n = length(unique(ret$Event$id)), M = M,
             max_yobs = max_yobs, max_fuptime = max_fuptime, assoc = assoc,
             family = family, random_trajectory = random_trajectory,
             clust_control = clust_control)
