@@ -355,6 +355,9 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
                      random_trajectory = "linear",
                      assoc = "etavalue", family = list(gaussian())) {
 
+  if (t == 0)
+    return(0) # boundary condition
+
   # Baseline hazard
   if (basehaz == "weibull") {
     h0 <- pars[["betaEvent_aux"]] * (t ^ (pars[["betaEvent_aux"]] - 1))
