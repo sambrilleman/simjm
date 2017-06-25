@@ -4,13 +4,14 @@
 \alias{simjm}
 \title{Simulate data for a univariate or multivariate joint model}
 \usage{
-simjm(n = 200, M = 3, random_trajectory = "linear", assoc = "etavalue",
-  basehaz = c("weibull"), betaLong_intercept = 90, betaLong_binary = -1.5,
-  betaLong_continuous = 1, betaLong_slope = 2.5, betaLong_aux = 10,
-  betaEvent_intercept = -11.87, betaEvent_binary = 0.6,
-  betaEvent_continuous = 0.08, betaEvent_assoc = 0.01, betaEvent_aux = 2,
-  b_sd = c(20, 3), b_rho = 0.5, max_yobs = 8, max_fuptime = 10,
-  family = gaussian, seed = NULL, interval = c(0, 200))
+simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
+  basehaz = c("weibull"), betaLong_intercept = 0, betaLong_binary = 1,
+  betaLong_continuous = 1, betaLong_slope = 1, betaLong_aux = 1,
+  betaEvent_intercept = -4, betaEvent_binary = 1,
+  betaEvent_continuous = 0, betaEvent_assoc = 0.2, betaEvent_aux = 1.2,
+  b_sd = c(2, 1), b_rho = -0.2, prob_Z1 = 0.5, mean_Z2 = 0, sd_Z2 = 1,
+  max_yobs = 10, max_fuptime = 5, family = gaussian,
+  seed = sample.int(.Machine$integer.max, 1), interval = c(0, 200))
 }
 \arguments{
 \item{n}{Number of subjects}
@@ -65,6 +66,15 @@ specifying the baseline hazard.}
 \item{b_sd}{Vector of standard deviations for the random effects.}
 
 \item{b_rho}{Correlation between the random effects.}
+
+\item{prob_Z1}{Probability for the binary covariate included in each of the
+submodels.}
+
+\item{mean_Z2}{Mean of the (normally distributed) continuous covariate included
+in each of the submodels.}
+
+\item{sd_Z2}{Standard deviation of the (normally distributed) continuous
+covariate included in each of the submodels.}
 
 \item{max_yobs}{The maximum allowed number of longitudinal measurements. The
 actual number of observed measurements will depend on the individuals event time.}

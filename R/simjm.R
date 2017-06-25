@@ -41,6 +41,12 @@
 #'   specifying the baseline hazard.
 #' @param b_sd Vector of standard deviations for the random effects.
 #' @param b_rho Correlation between the random effects.
+#' @param prob_Z1 Probability for the binary covariate included in each of the
+#'   submodels.
+#' @param mean_Z2 Mean of the (normally distributed) continuous covariate included
+#'   in each of the submodels.
+#' @param sd_Z2 Standard deviation of the (normally distributed) continuous
+#'   covariate included in each of the submodels.
 #' @param max_yobs The maximum allowed number of longitudinal measurements. The
 #'   actual number of observed measurements will depend on the individuals event time.
 #' @param max_fuptime The maximum follow up time in whatever the desired time
@@ -99,31 +105,33 @@
 #'                  family = binomial(),
 #'                  betaLong_aux = 1)
 #'
-simjm <- function(n = 200, M = 3,
+simjm <- function(n = 200, M = 1,
                   random_trajectory = "linear",
                   assoc = "etavalue",
                   basehaz = c("weibull"),
-                  betaLong_intercept = 90,
-                  betaLong_binary = -1.5,
+                  betaLong_intercept = 0,
+                  betaLong_binary = 1,
                   betaLong_continuous = 1,
-                  betaLong_slope = 2.5,
-                  betaLong_aux = 10,
-                  betaEvent_intercept = -11.87,
-                  betaEvent_binary = 0.6,
-                  betaEvent_continuous = 0.08,
-                  betaEvent_assoc = 0.01,
-                  betaEvent_aux = 2,
-                  b_sd = c(20,3), b_rho = 0.5,
-                  max_yobs = 8,
-                  max_fuptime = 10,
+                  betaLong_slope = 1,
+                  betaLong_aux = 1,
+                  betaEvent_intercept = -4,
+                  betaEvent_binary = 1,
+                  betaEvent_continuous = 0,
+                  betaEvent_assoc = 0.2,
+                  betaEvent_aux = 1.2,
+                  b_sd = c(2,1), b_rho = -0.2,
+                  prob_Z1 = 0.5,
+                  mean_Z2 = 0, sd_Z2 = 1,
+                  max_yobs = 10,
+                  max_fuptime = 5,
                   family = gaussian,
-                  seed = NULL, interval = c(0, 200))
+                  seed = sample.int(.Machine$integer.max, 1),
+                  interval = c(0, 200))
 {
 
   #----- Preliminaries
 
-  if (!is.null(seed))
-    set.seed(seed)
+  set.seed(seed)
 
   basehaz <- match.arg(basehaz)
 
@@ -230,12 +238,9 @@ simjm <- function(n = 200, M = 3,
   #----- Data
 
   # Generate baseline covariates - binary
-  prob_Z1 <- 0.45                  # probability for binary covariate
   Z1 <- rbinom(n, 1, prob_Z1)      # covariate value for each subject
 
   # Generate baseline covariates - continuous
-  mean_Z2 <- 44                    # mean for continuous covariate
-  sd_Z2   <- 8.5                   # sd for continuous covariate
   Z2 <- rnorm(n, mean_Z2, sd_Z2)   # covariate value for each subject
 
   # Construct data frame of baseline covariates
@@ -328,7 +333,7 @@ simjm <- function(n = 200, M = 3,
   # Return object
   structure(ret, params = c(long_params, event_params, re_params), n = n, M = M,
             max_yobs = max_yobs, max_fuptime = max_fuptime, assoc = assoc,
-            family = family, random_trajectory = random_trajectory)
+            family = family, random_trajectory = random_trajectory, seed = seed)
 }
 
 
