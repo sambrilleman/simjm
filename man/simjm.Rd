@@ -4,6 +4,15 @@
 \alias{simjm}
 \title{Simulate data for a univariate or multivariate joint model}
 \usage{
+simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
+  basehaz = c("weibull"), betaLong_intercept = 0, betaLong_binary = 1,
+  betaLong_continuous = 1, betaLong_slope = 1, betaLong_aux = 1,
+  betaEvent_intercept = -4, betaEvent_binary = 1,
+  betaEvent_continuous = 0, betaEvent_assoc = 0.2, betaEvent_aux = 1.2,
+  b_sd = c(2, 1), b_rho = -0.2, prob_Z1 = 0.5, mean_Z2 = 0, sd_Z2 = 1,
+  max_yobs = 10, max_fuptime = 5, family = gaussian,
+  clust_control = list(), seed = sample.int(.Machine$integer.max, 1),
+  interval = c(0, 200))
 }
 \arguments{
 \item{n}{Number of individuals}
@@ -171,14 +180,13 @@ simdat6 <- simjm(M = 1,
 # each of the lower level units.
 simdat7 <- simjm(M = 1,
                  random_trajectory = "none",
-                 b_sd = 10,
-                 betaLong_aux = 6,
-                 betaEvent_assoc = 0.01,
+                 betaLong_intercept = -1,
+                 b_sd = 1,
                  clust_control = list(
-                   L = 8,
+                   L = 6,
                    assoc = "sum",
                    random_trajectory = "linear",
-                   u_sd = c(10,3)
+                   u_sd = c(1,1)
                  ))
 
 }
