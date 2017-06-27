@@ -1,0 +1,14 @@
+﻿Revert "Merge branch 'multilevel-master' into revise-true-param-values"
+
+This reverts commit 4a56c81d17ce16cc48788b3ebea373a034e01b93, reversing
+changes made to dbf1e9200a148e7c6044f5072daa4fdb5ea31f4f.
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+# On branch attempt-unmerge
+# Changes to be committed:
+#	modified:   R/simjm.R
+#	modified:   man/simjm.Rd
+#	modified:   simjm.Rproj
+#
+
