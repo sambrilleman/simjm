@@ -22,10 +22,13 @@ simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
 \item{random_trajectory}{The desired type of trajectory in the random effects
 part of the longitudinal model.}
 
-\item{assoc}{The desired type of association structure for the joint model.
-Only one association structure type can be specified. The options are:
-\code{"etavalue"}, \code{"etaslope"}, \code{"shared_b(1)"},
-\code{"shared_coef(1)"}, \code{"shared_b(2)"}, \code{"shared_coef(2)"}.}
+\item{assoc}{A character string, or a character vector of length M,
+specifying the desired type of association structure for
+linking each longitudinal outcome to the hazard of the event.
+Only one association structure type can be specified for each longitudinal
+outcome. The options are: \code{"etavalue"}, \code{"etaslope"},
+\code{"shared_b(1)"}, \code{"shared_coef(1)"}, \code{"shared_b(2)"},
+\code{"shared_coef(2)"}.}
 
 \item{basehaz}{The desired baseline hazard for the event submodel. Can be
 \code{"weibull"}.}
@@ -122,53 +125,65 @@ only include a random intercept at the cluster level, or otherwise
 \code{\link[stats]{uniroot}} corresponding to each simulated event time.}
 }
 \value{
-A data frame in long format. The data frame also has a number of
-  attributes that record the values specified for the arguments in the
-  \code{simjm} call (for example the "true" parameter values, the number
+A list of data frames, one for each longitudinal biomarker (in long
+  format) and one for the event time data. The returned object also has a
+  number of attributes that record the values specified for the arguments in
+  the \code{simjm} call (for example the "true" parameter values, the number
   of individuals, the number of longitudinal markers, and so on).
 }
 \description{
-Returns a data frame containing data simulated from a joint model for
+Returns a list of data frames containing data simulated from a joint model for
 longitudinal and time-to-event data.
 }
-\examples{
-#####
-# By default simjm will simulate data for three longitudinal biomarkers.
-# However, if we only want one or two longitudinal biomarkers then we need to
-# adjust the "true" parameters accordingly so that we still get realistic
-# survival times. The easiest option is to change the "true" association
-# parameter value. Some suggested values that lead to realistic survival
-# times are given below.
+\details{
+The \code{simjm} function returns data simulated under a joint
+  longitudinal and time-to-event model. The joint model can be univariate
+  (i.e. one longitudinal outcome) or multivariate (i.e. more than one
+  longitudinal outcome). If more than one longitudinal outcome is specified
+  then the longitudinal outcomes are assumed to be correlated via a joint
+  multivariate normal distribution for the individual-level random effects.
+  Each longitudinal outcome may have a different family and link function.
+  The time-to-event model is assumed to be a parametric proportional hazards
+  model with the baseline hazard specified via the \code{basehaz} argument.
+  The (log) hazard of the event is assumed to be related to each longitudinal
+  outcome via the association structure specified in the \code{assoc} argument.
+  A different association may be specified for linking each longitudinal
+  outcome to the hazard of the event.
 
-# For one longitudinal marker:
-simdat1 <- simjm(M = 1, betaEvent_assoc = 0.03)
+  Note that by default \code{simjm} will simulate data for one longitudinal
+  outcome (i.e. a univariate joint model). If we want to simulate data for
+  a multivariate joint model, or we wish to use one of the non-default
+  association structures (for example "etaslope"), then we may need to adjust
+  the "true" parameters accordingly so that we still get realistic survival
+  times (for example, by changing the "true" association parameter value).
+}
+\examples{
+# For one longitudinal marker, we can just use the defaults:
+simdat1 <- simjm()
 
 # For two longitudinal markers:
-simdat2 <- simjm(M = 2, betaEvent_assoc = 0.015)
-
-# For three longitudinal markers, we can just use the defaults:
-simdat3 <- simjm()
+simdat2 <- simjm(M = 2, betaEvent_assoc = 0.1)
 
 # Simulate three markers for just 100 individuals and then return
 # the true parameter values (which are stored as an attribute):
-simdat4 <- simjm(n = 100)
-attr(simdat4, "params")
+simdat3 <- simjm(M = 3, betaEvent_assoc = 0.1, n = 100)
+attr(simdat3, "params")
 
-# Simulate three longitudinal markers, using "etaslope"
+# Simulate one longitudinal marker, using "etaslope"
 # association structure
-simdat5 <- simjm(assoc = "etaslope", betaEvent_assoc = 0.3)
+simdat4 <- simjm(assoc = "etaslope", betaEvent_assoc = 0.8)
 
 # For one longitudinal marker, with a bernoulli outcome.
 # (Note that 'betaLong_aux' specifies the number of trials
 # for the binomial outcome).
-simdat6 <- simjm(M = 1,
+simdat5 <- simjm(M = 1,
                  betaLong_intercept = 1.3,
                  betaLong_binary = -0.6,
                  betaLong_continuous = -0.03,
                  betaLong_slope = 0.05,
                  b_sd = c(1, 0.05),
                  betaEvent_intercept = -9,
-                 betaEvent_assoc = 0.05,
+                 betaEvent_assoc = 0.3,
                  family = binomial(),
                  betaLong_aux = 1)
 
@@ -178,7 +193,7 @@ simdat6 <- simjm(M = 1,
 # random slope at the lower cluster level. The association
 # structure is based on a summation of the expected values for
 # each of the lower level units.
-simdat7 <- simjm(M = 1,
+simdat6 <- simjm(M = 1,
                  random_trajectory = "none",
                  betaLong_intercept = -1,
                  b_sd = 1,
