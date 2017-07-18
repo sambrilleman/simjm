@@ -12,7 +12,7 @@ simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
   b_sd = c(2, 1), b_rho = -0.2, prob_Z1 = 0.5, mean_Z2 = 0, sd_Z2 = 1,
   max_yobs = 10, max_fuptime = 5, family = gaussian,
   clust_control = list(), seed = sample.int(.Machine$integer.max, 1),
-  interval = c(0, 200))
+  interval = c(1e-08, 200))
 }
 \arguments{
 \item{n}{Number of individuals}

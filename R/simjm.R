@@ -185,7 +185,7 @@ simjm <- function(n = 200, M = 1,
                   family = gaussian,
                   clust_control = list(),
                   seed = sample.int(.Machine$integer.max, 1),
-                  interval = c(0, 200)) {
+                  interval = c(1E-8, 200)) {
 
   #----- Preliminaries
 
@@ -298,42 +298,42 @@ simjm <- function(n = 200, M = 1,
   }
 
   # Construct data frame of parameters
-  pars <- list()
+  betas <- list()
   for (m in 1:M) {
     nm <- paste0("Long", m)
-    pars[[nm]] <- data.frame(id = 1:n)
+    betas[[nm]] <- data.frame(id = 1:n)
     # fixed effect parameters
-    pars[[nm]][[paste0("betaLong_intercept", m)]] <- rep(betaLong_intercept[m], n)
-    pars[[nm]][[paste0("betaLong_binary", m)]] <- rep(betaLong_binary[m], n)
-    pars[[nm]][[paste0("betaLong_continuous", m)]] <- rep(betaLong_continuous[m], n)
+    betas[[nm]][[paste0("betaLong_intercept", m)]] <- rep(betaLong_intercept[m], n)
+    betas[[nm]][[paste0("betaLong_binary", m)]] <- rep(betaLong_binary[m], n)
+    betas[[nm]][[paste0("betaLong_continuous", m)]] <- rep(betaLong_continuous[m], n)
     if (random_trajectory[m] %in% c("none", "linear")) { # fixed effect slope
-      pars[[nm]][[paste0("betaLong_slope", m)]] <- rep(betaLong_slope[m], n)
+      betas[[nm]][[paste0("betaLong_slope", m)]] <- rep(betaLong_slope[m], n)
     } else if (random_trajectory[m] == "poly") { # fixed effect quadratic
-      pars[[nm]][[paste0("betaLong_poly1", m)]] <- rep(betaLong_poly1[m], n)
-      pars[[nm]][[paste0("betaLong_poly2", m)]] <- rep(betaLong_poly2[m], n)
+      betas[[nm]][[paste0("betaLong_poly1", m)]] <- rep(betaLong_poly1[m], n)
+      betas[[nm]][[paste0("betaLong_poly2", m)]] <- rep(betaLong_poly2[m], n)
     }
     # add on subject-specific intercept
     shift <- if (m == 1) 0 else sum(b_dim[1:(m - 1)])
     b_idx <- shift + 1
-    pars[[nm]][[paste0("betaLong_intercept",  m)]] <-
-      pars[[nm]][[paste0("betaLong_intercept",  m)]] + b[, b_idx]
+    betas[[nm]][[paste0("betaLong_intercept",  m)]] <-
+      betas[[nm]][[paste0("betaLong_intercept",  m)]] + b[, b_idx]
     # add on subject-specific linear slope
     if (random_trajectory[m] == "linear") {
       b_idx <- shift + 2
-      pars[[nm]][[paste0("betaLong_slope",  m)]] <-
-        pars[[nm]][[paste0("betaLong_slope",  m)]] + b[, b_idx]
+      betas[[nm]][[paste0("betaLong_slope",  m)]] <-
+        betas[[nm]][[paste0("betaLong_slope",  m)]] + b[, b_idx]
     }
     # add on subject-specific quadratic terms
     if (random_trajectory[m] == "poly") {
       b_idx <- shift + 2 # index of first quadratic term
-      pars[[nm]][[paste0("betaLong_poly1",  m)]] <-
-        pars[[nm]][[paste0("betaLong_poly1",  m)]] + b[, b_idx]
+      betas[[nm]][[paste0("betaLong_poly1",  m)]] <-
+        betas[[nm]][[paste0("betaLong_poly1",  m)]] + b[, b_idx]
       b_idx <- shift + 3 # index of second quadratic term
-      pars[[nm]][[paste0("betaLong_poly2",  m)]] <-
-        pars[[nm]][[paste0("betaLong_poly2",  m)]] + b[, b_idx]
+      betas[[nm]][[paste0("betaLong_poly2",  m)]] <-
+        betas[[nm]][[paste0("betaLong_poly2",  m)]] + b[, b_idx]
     }
   }
-  pars[["Event"]] <- data.frame(
+  betas[["Event"]] <- data.frame(
     id = 1:n,
     betaEvent_intercept  = rep(betaEvent_intercept,  n),
     betaEvent_binary     = rep(betaEvent_binary,     n),
@@ -341,29 +341,29 @@ simjm <- function(n = 200, M = 1,
     betaEvent_aux        = rep(betaEvent_aux,        n)
   )
   for (m in 1:M)
-    pars[["Event"]][[paste0("betaEvent_assoc", m)]] <- rep(betaEvent_assoc[m], n)
+    betas[["Event"]][[paste0("betaEvent_assoc", m)]] <- rep(betaEvent_assoc[m], n)
   if (has_clust) { # expand rows and add on cluster-specific random effects
-    pars[["Long1"]] <-
-      pars[["Long1"]][rep(row.names(pars[["Long1"]]), Li), , drop = FALSE]
+    betas[["Long1"]] <-
+      betas[["Long1"]][rep(row.names(betas[["Long1"]]), Li), , drop = FALSE]
     # cluster id within each individual
-    pars[["Long1"]]$clust <- sequence(Li)
+    betas[["Long1"]]$clust <- sequence(Li)
     # unique cluster id
-    pars[["Long1"]]$clust_id <-
-      paste(pars[["Long1"]][["id"]], pars[["Long1"]]$clust, sep = "_")
+    betas[["Long1"]]$clust_id <-
+      paste(betas[["Long1"]][["id"]], betas[["Long1"]]$clust, sep = "_")
     # add on cluster-specific intercept
-    pars[["Long1"]][["betaLong_intercept1"]] <-
-      pars[["Long1"]][["betaLong_intercept1"]] + u[, 1]
+    betas[["Long1"]][["betaLong_intercept1"]] <-
+      betas[["Long1"]][["betaLong_intercept1"]] + u[, 1]
     # add on cluster-specific linear slope
     if (clust_control$random_trajectory == "linear") {
-      pars[["Long1"]][["betaLong_slope1"]] <-
-        pars[["Long1"]][["betaLong_slope1"]] + u[, 2]
+      betas[["Long1"]][["betaLong_slope1"]] <-
+        betas[["Long1"]][["betaLong_slope1"]] + u[, 2]
     }
     # add on cluster-specific quadratic terms
     if (clust_control$random_trajectory == "poly") {
-      pars[["Long1"]][["betaLong_poly11"]] <-
-        pars[["Long1"]][["betaLong_poly11"]] + u[, 2]
-      pars[["Long1"]][["betaLong_poly21"]] <-
-        pars[["Long1"]][["betaLong_poly21"]] + u[, 3]
+      betas[["Long1"]][["betaLong_poly11"]] <-
+        betas[["Long1"]][["betaLong_poly11"]] + u[, 2]
+      betas[["Long1"]][["betaLong_poly21"]] <-
+        betas[["Long1"]][["betaLong_poly21"]] + u[, 3]
     }
   }
 
@@ -391,20 +391,20 @@ simjm <- function(n = 200, M = 1,
   covs <- data.frame(id = 1:n, Z1, Z2)
 
   # Generate survival times
-  ss <- simsurv::simsurv(hazfn = jm_hazfn, x = covs, pars = pars,
+  ss <- simsurv::simsurv(hazard = jm_hazard, x = covs, betas = betas,
                          idvar = "id", ids = covs$id, trajectory = trajectory,
                          maxt = max_fuptime, basehaz = basehaz, M = M,
                          assoc = assoc, family = family, interval = interval)
 
   # Construct data frame of event data
   dat <- list(
-    Event = data.frame(pars[["Event"]], covs, ss) # single row per subject
+    Event = data.frame(betas[["Event"]], covs, ss) # single row per subject
   )
 
   # Construct data frame of longitudinal data
   for (m in 1:M) {
     nm <- paste0("Long", m)
-    dat[[nm]] <- merge(pars[[nm]], dat[["Event"]])
+    dat[[nm]] <- merge(betas[[nm]], dat[["Event"]])
     dat[[nm]] <- merge(dat[[nm]], covs)
     dat[[nm]] <- dat[[nm]][rep(row.names(dat[[nm]]), max_yobs), ] # multiple row per subject
     dat[[nm]]$tij <- runif(nrow(dat[[nm]]), 0, max_fuptime)       # create observation times
@@ -503,7 +503,7 @@ simjm <- function(n = 200, M = 1,
 #
 # @param t The time variable
 # @param x A named vector of covariate values
-# @param pars A named vector of parameter values
+# @param betas A named vector of parameter values
 # @param basehaz The type of baseline hazard
 # @param M The number of longitudinal submodels
 # @param assoc A vector of character strings, indicating the association
@@ -511,25 +511,24 @@ simjm <- function(n = 200, M = 1,
 # @param A list of family objects, providing the family (and link function)
 #   for each longitudinal submodel
 # @return A scalar
-jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
-                     trajectory = "linear",
-                     assoc = "etavalue", family = list(gaussian()),
-                     grp_assoc = NULL) {
+jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
+                      trajectory = "linear", assoc = "etavalue",
+                      family = list(gaussian()), grp_assoc = NULL) {
 
   if (t == 0)
     return(0) # boundary condition
 
   # Baseline hazard
   if (basehaz == "weibull") {
-    h0 <- pars[["Event"]][["betaEvent_aux"]] *
-      (t ^ (pars[["Event"]][["betaEvent_aux"]] - 1))
+    h0 <- betas[["Event"]][["betaEvent_aux"]] *
+      (t ^ (betas[["Event"]][["betaEvent_aux"]] - 1))
   }
 
   # Time-invariant part of event submodel eta
   etaevent <-
-    pars[["Event"]][["betaEvent_intercept"]] +
-    pars[["Event"]][["betaEvent_binary"]] * x[["Z1"]] +
-    pars[["Event"]][["betaEvent_continuous"]] * x[["Z2"]]
+    betas[["Event"]][["betaEvent_intercept"]] +
+    betas[["Event"]][["betaEvent_binary"]] * x[["Z1"]] +
+    betas[["Event"]][["betaEvent_continuous"]] * x[["Z2"]]
 
   # Association structure
   for (m in 1:M) {
@@ -537,17 +536,17 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
     nm <- paste0("Long", m)
 
     etabaseline_m <- etavalue_m <-
-      pars[[nm]][[paste0("betaLong_intercept", m)]] +
-      pars[[nm]][[paste0("betaLong_binary", m)]] * x[["Z1"]] +
-      pars[[nm]][[paste0("betaLong_continuous", m)]] * x[["Z2"]]
+      betas[[nm]][[paste0("betaLong_intercept", m)]] +
+      betas[[nm]][[paste0("betaLong_binary", m)]] * x[["Z1"]] +
+      betas[[nm]][[paste0("betaLong_continuous", m)]] * x[["Z2"]]
     if (trajectory[m] %in% c("none", "linear")) {
       # if no random slope, then still use fixed linear slope
       etavalue_m <- etavalue_m +
-        pars[[nm]][[paste0("betaLong_slope", m)]] * t
+        betas[[nm]][[paste0("betaLong_slope", m)]] * t
     } else if (trajectory[m] == "poly") {
       etavalue_m <- etavalue_m +
-        pars[[nm]][[paste0("betaLong_poly1",  m)]] * t +
-        pars[[nm]][[paste0("betaLong_poly2",  m)]] * (t * t)
+        betas[[nm]][[paste0("betaLong_poly1",  m)]] * t +
+        betas[[nm]][[paste0("betaLong_poly2",  m)]] * (t * t)
     }
     if (!is.null(grp_assoc)) {
       if (grp_assoc == "sum") {
@@ -560,7 +559,7 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
     # eta value
     if (assoc[m] == "etavalue") {
       etaevent <- etaevent +
-        pars[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etavalue_m
+        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etavalue_m
     }
 
     # eta slope
@@ -568,11 +567,11 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
       if (trajectory[m] %in% c("none", "linear")) {
         # if no random slope, then still use fixed linear slope
         etaslope_m <-
-          pars[[nm]][[paste0("betaLong_slope", m)]]
+          betas[[nm]][[paste0("betaLong_slope", m)]]
       } else if (trajectory[m] == "poly") {
         etaslope_m <-
-          pars[[nm]][[paste0("betaLong_poly1",  m)]] +
-          pars[[nm]][[paste0("betaLong_poly2",  m)]] * (2 * t)
+          betas[[nm]][[paste0("betaLong_poly1",  m)]] +
+          betas[[nm]][[paste0("betaLong_poly2",  m)]] * (2 * t)
       }
       if (!is.null(grp_assoc)) {
         if (grp_assoc == "sum") {
@@ -582,7 +581,7 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
         }
       } else res_etaslope_m <- etaslope_m
       etaevent <- etaevent +
-        pars[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etaslope_m
+        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etaslope_m
     }
 
     # eta auc
@@ -599,7 +598,7 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
         stop("'etaauc' association structure cannot currently be used ",
              "when there is lower level clustering within individuals.")
       etaevent <- etaevent +
-        pars[["Event"]][[paste0("betaEvent_assoc", m)]] * etaauc_m
+        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * etaauc_m
     }
 
     # mu value
@@ -614,7 +613,7 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
         }
       } else res_muvalue_m <- muvalue_m
       etaevent <- etaevent +
-        pars[["Event"]][[paste0("betaEvent_assoc", m)]] * muvalue_m
+        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * muvalue_m
     }
 
   }
