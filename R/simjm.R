@@ -536,28 +536,29 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
 
     nm <- paste0("Long", m)
 
+    etabaseline_m <- etavalue_m <-
+      pars[[nm]][[paste0("betaLong_intercept", m)]] +
+      pars[[nm]][[paste0("betaLong_binary", m)]] * x[["Z1"]] +
+      pars[[nm]][[paste0("betaLong_continuous", m)]] * x[["Z2"]]
+    if (trajectory[m] %in% c("none", "linear")) {
+      # if no random slope, then still use fixed linear slope
+      etavalue_m <- etavalue_m +
+        pars[[nm]][[paste0("betaLong_slope", m)]] * t
+    } else if (trajectory[m] == "poly") {
+      etavalue_m <- etavalue_m +
+        pars[[nm]][[paste0("betaLong_poly1",  m)]] * t +
+        pars[[nm]][[paste0("betaLong_poly2",  m)]] * (t * t)
+    }
+    if (!is.null(grp_assoc)) {
+      if (grp_assoc == "sum") {
+        res_etavalue_m <- sum(etavalue_m)
+      } else if (grp_assoc == "mean") {
+        res_etavalue_m <- mean(etavalue_m)
+      }
+    } else res_etavalue_m <- etavalue_m
+
     # eta value
     if (assoc[m] == "etavalue") {
-      etabaseline_m <- etavalue_m <-
-        pars[[nm]][[paste0("betaLong_intercept", m)]] +
-        pars[[nm]][[paste0("betaLong_binary", m)]] * x[["Z1"]] +
-        pars[[nm]][[paste0("betaLong_continuous", m)]] * x[["Z2"]]
-      if (trajectory[m] %in% c("none", "linear")) {
-        # if no random slope, then still use fixed linear slope
-        etavalue_m <- etavalue_m +
-          pars[[nm]][[paste0("betaLong_slope", m)]] * t
-      } else if (trajectory[m] == "poly") {
-        etavalue_m <- etavalue_m +
-          pars[[nm]][[paste0("betaLong_poly1",  m)]] * t +
-          pars[[nm]][[paste0("betaLong_poly2",  m)]] * (t * t)
-      }
-      if (!is.null(grp_assoc)) {
-        if (grp_assoc == "sum") {
-          res_etavalue_m <- sum(etavalue_m)
-        } else if (grp_assoc == "mean") {
-          res_etavalue_m <- mean(etavalue_m)
-        }
-      } else res_etavalue_m <- etavalue_m
       etaevent <- etaevent +
         pars[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etavalue_m
     }
@@ -602,7 +603,7 @@ jm_hazfn <- function(t, x, pars, basehaz = "weibull", M = 1,
     }
 
     # mu value
-    if (assoc[m] == "etaauc") {
+    if (assoc[m] == "muvalue") {
       invlink <- family[[m]]$invlink
       muvalue_m <- invlink(etavalue_m)
       if (!is.null(grp_assoc)) {
