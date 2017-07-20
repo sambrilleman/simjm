@@ -171,6 +171,8 @@ simjm <- function(n = 200, M = 1,
                   betaLong_binary = 1,
                   betaLong_continuous = 1,
                   betaLong_slope = 1,
+                  betaLong_poly1 = 1,
+                  betaLong_poly2 = 0.2,
                   betaLong_aux = 1,
                   betaEvent_intercept = -4,
                   betaEvent_binary = 1,
@@ -253,6 +255,8 @@ simjm <- function(n = 200, M = 1,
   betaLong_binary     <- maybe_broadcast(betaLong_binary,     M)
   betaLong_continuous <- maybe_broadcast(betaLong_continuous, M)
   betaLong_slope      <- maybe_broadcast(betaLong_slope,      M)
+  betaLong_poly1      <- maybe_broadcast(betaLong_poly1,      M)
+  betaLong_poly2      <- maybe_broadcast(betaLong_poly2,      M)
   betaLong_aux        <- maybe_broadcast(betaLong_aux,        M)
   betaEvent_assoc     <- maybe_broadcast(betaEvent_assoc,     M)
 
