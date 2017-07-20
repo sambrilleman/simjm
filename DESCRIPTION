@@ -10,12 +10,16 @@ Maintainer: Sam Brilleman <sam.brilleman@monash.edu>
 Description: Simulates data from a joint longitudinal and survival model. The 
     model can be a univariate (one longitudinal marker) or a multivariate (more
     than one longitudinal marker) joint model.
-License: GPL (>=3)
+License: GPL (>=3) | file LICENSE
 Depends:
-    R (>= 3.3.2)
+    R (>= 3.3.2),
 Imports:
     MASS,
-    simsurv (>= 0.0.0)
+    methods,
+    simsurv (>= 0.0.0),
+    stats
 Suggests:
+    dplyr (>= 0.5.0),
+    ggplot2 (>= 2.2.1)
 LazyData: true
 RoxygenNote: 6.0.1

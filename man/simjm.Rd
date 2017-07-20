@@ -20,7 +20,14 @@ simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
 \item{M}{Number of longitudinal markers}
 
 \item{random_trajectory}{The desired type of trajectory in the random effects
-part of the longitudinal model.}
+part of the longitudinal model. Can be \code{"linear"} (the default),
+\code{"poly"}, or \code{"none"}. Can be a single character string, or a
+character vector of length M (if a different trajectory type is to be used
+for each longitudinal submodel). If \code{random_trajectory = "linear"} or
+\code{random_trajectory = "none"} then a fixed effect linear
+slope is also included in the longitudinal submodel. If
+\code{random_trajectory = "poly"} then fixed effect
+quadratic terms are also included in the longitudinal submodel.}
 
 \item{assoc}{A character string, or a character vector of length M,
 specifying the desired type of association structure for
@@ -44,6 +51,14 @@ longitudinal submodel. Can be a scalar or a vector of length M.}
 
 \item{betaLong_slope}{True coefficient for the fixed effect slope in the
 longitudinal submodel. Can be a scalar or a vector of length M.}
+
+\item{betaLong_poly1}{True coefficient for the fixed effect linear term
+in the longitudinal submodel when \code{random_trajectory = "poly"}. Can be
+a scalar or a vector of length M.}
+
+\item{betaLong_poly2}{True coefficient for the fixed effect quadratic term
+in the longitudinal submodel when \code{random_trajectory = "poly"}. Can
+be a scalar or a vector of length M.}
 
 \item{betaLong_aux}{True parameter value for the auxiliary parameter in the
 longitudinal submodel (sigma for Gaussian models, number of trials for
@@ -158,25 +173,25 @@ The \code{simjm} function returns data simulated under a joint
   times (for example, by changing the "true" association parameter value).
 }
 \examples{
-# For one longitudinal marker, we can just use the defaults:
-simdat1 <- simjm()
+# Note that throughout the examples we specify 'n = 30' to
+# ensure a small sample size so that the examples run quickly
 
-# For two longitudinal markers:
-simdat2 <- simjm(M = 2, betaEvent_assoc = 0.1)
+# Simulate one longitudinal marker (we can just use the defaults):
+simdat1 <- simjm(n = 30)
 
-# Simulate three markers for just 100 individuals and then return
-# the true parameter values (which are stored as an attribute):
-simdat3 <- simjm(M = 3, betaEvent_assoc = 0.1, n = 100)
-attr(simdat3, "params")
+# Simulate two longitudinal markers and then check the
+# true parameter values (stored as an attribute):
+simdat2 <- simjm(M = 2, n = 30, betaEvent_assoc = 0.1)
+attr(simdat2, "params")
 
 # Simulate one longitudinal marker, using "etaslope"
-# association structure
-simdat4 <- simjm(assoc = "etaslope", betaEvent_assoc = 0.8)
+# association structure:
+simdat3 <- simjm(n = 30, assoc = "etaslope", betaEvent_assoc = 0.8)
 
 # For one longitudinal marker, with a bernoulli outcome.
 # (Note that 'betaLong_aux' specifies the number of trials
 # for the binomial outcome).
-simdat5 <- simjm(M = 1,
+simdat4 <- simjm(M = 1, n = 30,
                  betaLong_intercept = 1.3,
                  betaLong_binary = -0.6,
                  betaLong_continuous = -0.03,
@@ -193,7 +208,7 @@ simdat5 <- simjm(M = 1,
 # random slope at the lower cluster level. The association
 # structure is based on a summation of the expected values for
 # each of the lower level units.
-simdat6 <- simjm(M = 1,
+simdat5 <- simjm(M = 1, n = 30,
                  random_trajectory = "none",
                  betaLong_intercept = -1,
                  b_sd = 1,

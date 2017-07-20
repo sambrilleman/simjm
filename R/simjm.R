@@ -4,11 +4,20 @@
 #' longitudinal and time-to-event data.
 #'
 #' @export
+#' @importFrom stats gaussian
+#' @importFrom methods is
 #'
 #' @param n Number of individuals
 #' @param M Number of longitudinal markers
 #' @param random_trajectory The desired type of trajectory in the random effects
-#'   part of the longitudinal model.
+#'   part of the longitudinal model. Can be \code{"linear"} (the default),
+#'   \code{"poly"}, or \code{"none"}. Can be a single character string, or a
+#'   character vector of length M (if a different trajectory type is to be used
+#'   for each longitudinal submodel). If \code{random_trajectory = "linear"} or
+#'   \code{random_trajectory = "none"} then a fixed effect linear
+#'   slope is also included in the longitudinal submodel. If
+#'   \code{random_trajectory = "poly"} then fixed effect linear and
+#'   quadratic terms are also included in the longitudinal submodel.
 #' @param assoc A character string, or a character vector of length M,
 #'   specifying the desired type of association structure for
 #'   linking each longitudinal outcome to the hazard of the event.
@@ -25,7 +34,14 @@
 #' @param betaLong_continuous True coefficient for the continuous covariate in the
 #'   longitudinal submodel. Can be a scalar or a vector of length M.
 #' @param betaLong_slope True coefficient for the fixed effect slope in the
-#'   longitudinal submodel. Can be a scalar or a vector of length M.
+#'   longitudinal submodel when \code{random_trajectory = "linear"} or
+#'   \code{random_trajectory = "none"}. Can be a scalar or a vector of length M.
+#' @param betaLong_poly1 True coefficient for the fixed effect linear term
+#'   in the longitudinal submodel when \code{random_trajectory = "poly"}. Can be
+#'   a scalar or a vector of length M.
+#' @param betaLong_poly2 True coefficient for the fixed effect quadratic term
+#'   in the longitudinal submodel when \code{random_trajectory = "poly"}. Can
+#'   be a scalar or a vector of length M.
 #' @param betaLong_aux True parameter value for the auxiliary parameter in the
 #'   longitudinal submodel (sigma for Gaussian models, number of trials for
 #'   binomial models, size for negative binomial models, shape for Gamma models,
@@ -117,25 +133,25 @@
 #'   of individuals, the number of longitudinal markers, and so on).
 #'
 #' @examples
-#' # For one longitudinal marker, we can just use the defaults:
-#' simdat1 <- simjm()
+#' # Note that throughout the examples we specify 'n = 30' to
+#' # ensure a small sample size so that the examples run quickly
 #'
-#' # For two longitudinal markers:
-#' simdat2 <- simjm(M = 2, betaEvent_assoc = 0.1)
+#' # Simulate one longitudinal marker (we can just use the defaults):
+#' simdat1 <- simjm(n = 30)
 #'
-#' # Simulate three markers for just 100 individuals and then return
-#' # the true parameter values (which are stored as an attribute):
-#' simdat3 <- simjm(M = 3, betaEvent_assoc = 0.1, n = 100)
-#' attr(simdat3, "params")
+#' # Simulate two longitudinal markers and then check the
+#' # true parameter values (stored as an attribute):
+#' simdat2 <- simjm(M = 2, n = 30, betaEvent_assoc = 0.1)
+#' attr(simdat2, "params")
 #'
 #' # Simulate one longitudinal marker, using "etaslope"
-#' # association structure
-#' simdat4 <- simjm(assoc = "etaslope", betaEvent_assoc = 0.8)
+#' # association structure:
+#' simdat3 <- simjm(n = 30, assoc = "etaslope", betaEvent_assoc = 0.8)
 #'
 #' # For one longitudinal marker, with a bernoulli outcome.
 #' # (Note that 'betaLong_aux' specifies the number of trials
 #' # for the binomial outcome).
-#' simdat5 <- simjm(M = 1,
+#' simdat4 <- simjm(M = 1, n = 30,
 #'                  betaLong_intercept = 1.3,
 #'                  betaLong_binary = -0.6,
 #'                  betaLong_continuous = -0.03,
@@ -152,7 +168,7 @@
 #' # random slope at the lower cluster level. The association
 #' # structure is based on a summation of the expected values for
 #' # each of the lower level units.
-#' simdat6 <- simjm(M = 1,
+#' simdat5 <- simjm(M = 1, n = 30,
 #'                  random_trajectory = "none",
 #'                  betaLong_intercept = -1,
 #'                  b_sd = 1,
@@ -293,7 +309,7 @@ simjm <- function(n = 200, M = 1,
     if (!length(u_sd) == u_dim)
       stop("In clust_control, 'u_sd' appears to be the wrong length. ",
            "Should be length ", u_dim, ".")
-    Li <- as.integer(runif(n, 1, L+1)) # num units within each individual
+    Li <- as.integer(stats::runif(n, 1, L+1)) # num units within each individual
     u_corr_mat <- matrix(rep(b_rho, u_dim ^ 2), ncol = u_dim)
     diag(u_corr_mat) <- 1
     u_dd <- MASS::mvrnorm(n = sum(Li), mu = rep(0, u_dim), Sigma = u_corr_mat)
@@ -386,10 +402,10 @@ simjm <- function(n = 200, M = 1,
   #----- Data
 
   # Generate baseline covariates - binary
-  Z1 <- rbinom(n, 1, prob_Z1)      # covariate value for each subject
+  Z1 <- stats::rbinom(n, 1, prob_Z1)      # covariate value for each subject
 
   # Generate baseline covariates - continuous
-  Z2 <- rnorm(n, mean_Z2, sd_Z2)   # covariate value for each subject
+  Z2 <- stats::rnorm(n, mean_Z2, sd_Z2)   # covariate value for each subject
 
   # Construct data frame of baseline covariates
   covs <- data.frame(id = 1:n, Z1, Z2)
@@ -411,7 +427,7 @@ simjm <- function(n = 200, M = 1,
     dat[[nm]] <- merge(betas[[nm]], dat[["Event"]])
     dat[[nm]] <- merge(dat[[nm]], covs)
     dat[[nm]] <- dat[[nm]][rep(row.names(dat[[nm]]), max_yobs), ] # multiple row per subject
-    dat[[nm]]$tij <- runif(nrow(dat[[nm]]), 0, max_fuptime)       # create observation times
+    dat[[nm]]$tij <- stats::runif(nrow(dat[[nm]]), 0, max_fuptime)       # create observation times
     if (has_clust && m == 1) { # sort on ID, cluster ID and time
       dat[[nm]] <- dat[[nm]][order(dat[[nm]]$id, dat[[nm]]$clust_id, dat[[nm]]$tij), ]
     } else { # sort on ID and time
@@ -435,18 +451,18 @@ simjm <- function(n = 200, M = 1,
     mu <- invlink(dat[[nm]][[paste0("Xij_", m)]])
     if (fam == "gaussian") {
       sigma <- betaLong_aux[m]
-      dat[[nm]][[paste0("Yij_", m)]] <- rnorm(length(mu), mu, sigma)
+      dat[[nm]][[paste0("Yij_", m)]] <- stats::rnorm(length(mu), mu, sigma)
     } else if (fam == "binomial") {
       trials <- betaLong_aux[m]
-      dat[[nm]][[paste0("Yij_", m)]] <- rbinom(length(mu), trials, mu)
+      dat[[nm]][[paste0("Yij_", m)]] <- stats::rbinom(length(mu), trials, mu)
     } else if (fam == "poisson") {
-      dat[[nm]][[paste0("Yij_", m)]] <- rpois(length(mu), mu)
+      dat[[nm]][[paste0("Yij_", m)]] <- stats::rpois(length(mu), mu)
     } else if (fam == "neg_binomial_2") {
       size <- betaLong_aux[m]
-      dat[[nm]][[paste0("Yij_", m)]] <- rnbinom(length(mu), size, mu)
+      dat[[nm]][[paste0("Yij_", m)]] <- stats::rnbinom(length(mu), size, mu)
     } else if (fam == "Gamma") {
       shape <- betaLong_aux[m]
-      dat[[nm]][[paste0("Yij_", m)]] <- rgamma(length(mu), shape, rate = shape / mu)
+      dat[[nm]][[paste0("Yij_", m)]] <- stats::rgamma(length(mu), shape, rate = shape / mu)
     } else if (fam == "inverse.gaussian") {
       lambda <- betaLong_aux[m]
       dat[[nm]][[paste0("Yij_", m)]] <- .rinvGauss(length(mu), mu, lambda)

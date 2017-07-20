@@ -7,8 +7,8 @@
 # Draw from inverse Gaussian distribution
 .rinvGauss <- function(n, mu, lambda) {
   mu2 <- mu^2
-  y <- rnorm(n)^2
-  z <- runif(n)
+  y <- stats::rnorm(n)^2
+  z <- stats::runif(n)
   tmp <- (mu2 * y - mu * sqrt(4 * mu * lambda * y + mu2 * y^2))
   x <- mu + tmp / (2 * lambda)
   ifelse(z <= (mu / (mu + x)), x, mu2 / x)
