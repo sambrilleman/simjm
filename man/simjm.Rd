@@ -7,7 +7,7 @@
 simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
   basehaz = c("weibull"), betaLong_intercept = 0, betaLong_binary = 1,
   betaLong_continuous = 1, betaLong_slope = 1, betaLong_poly1 = 1,
-  betaLong_poly2 = 0.2, betaLong_aux = 1, betaEvent_intercept = -4,
+  betaLong_poly2 = 0.5, betaLong_aux = 1, betaEvent_intercept = -4,
   betaEvent_binary = 1, betaEvent_continuous = 0, betaEvent_assoc = 0.2,
   betaEvent_aux = 1.2, b_sd = c(2, 1), b_rho = -0.2, prob_Z1 = 0.5,
   mean_Z2 = 0, sd_Z2 = 1, max_yobs = 10, max_fuptime = 5,
