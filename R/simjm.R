@@ -1,3 +1,5 @@
+# Copyright (C) 2017,2018 Sam Brilleman
+
 #' Simulate data for a univariate or multivariate joint model
 #'
 #' Returns a list of data frames containing data simulated from a joint model for
@@ -65,10 +67,18 @@
 #' @param sd_Z2 Standard deviation of the (normally distributed) continuous
 #'   covariate included in each of the submodels.
 #' @param b_sd A list, with each element of the list containing the vector of
-#'   standard deviations for the random effects relating to one grouping factor.
-#' @param b_rho Correlation between the random effects. This is assumed to be
-#'   the correlation between all random effects within a grouping factor, and
-#'   the same correlation is used for each grouping factor.
+#'   standard deviations for the individual-level random effects.
+#' @param b_rho Correlation between the individual-level random effects. This is
+#'   only relevant when there is a total of >1 individual-level random effects in
+#'   the joint model. This can be specified as a scalar correlation term, which
+#'   assumes the same (true) correlation
+#'   between each of the individual-level random effects, or it can be a correlation
+#'   matrix for the correlation between the individual-level random effects. When
+#'   simulating data for a multivariate joint model, the structure of the
+#'   correlation matrix is such that the first \eqn{K_1} columns/rows correspond
+#'   to the individual-level random effects for the first longitudinal submodel,
+#'   and the next \eqn{K_2} columns/rows correspond to the individual-level random
+#'   effects for the second longitudinal submodel, and so on.
 #' @param max_yobs The maximum allowed number of longitudinal measurements. The
 #'   actual number of observed measurements will depend on the individuals event time.
 #' @param max_fuptime The maximum follow up time in whatever the desired time
@@ -95,7 +105,12 @@
 #'   (i.e. average) taken across the lower level units clustered within an
 #'   individual.}
 #'   \item{u_sd}{Numeric vector providing the standard deviations of the random
-#'   effect at the cluster level.}
+#'   effects at the cluster level.}
+#'   \item{u_rho}{A scalar or a correlation matrix providing the correlation
+#'   between the random effects for the lower level clustering factor. This is
+#'   only relevant if there are >1 random effects for the lower level clustering
+#'   factor. This is specified in a similar way as the \code{b_rho} argument
+#'   described above.}
 #'   \item{random_trajectory}{The desired type of trajectory in the random effects
 #'   part of the longitudinal model at the cluster level. Can be \code{"none"} to
 #'   only include a random intercept at the cluster level, or otherwise
@@ -176,7 +191,8 @@
 #'                    L = 6,
 #'                    assoc = "sum",
 #'                    random_trajectory = "linear",
-#'                    u_sd = c(1,1)
+#'                    u_sd = c(1,1),
+#'                    u_rho = 0.2
 #'                  ))
 #'
 simjm <- function(n = 200, M = 1,
@@ -243,9 +259,13 @@ simjm <- function(n = 200, M = 1,
     if (!is(clust_control, "list"))
       stop("'clust_control' should be a named list.")
     clust_nms <- names(clust_control)
+    ok_clust_args <- c("L", "assoc", "random_trajectory", "u_sd", "u_rho")
+    if (!all(clust_nms %in% ok_clust_args))
+      stop("'clust_control' should only include the following named arguments: ",
+           paste(ok_clust_args, collapse = ", "))
     req_clust_args <- c("L", "assoc", "random_trajectory", "u_sd")
-    if (!identical(sort(clust_nms), sort(req_clust_args)))
-      stop("'clust_control' should include the following named arguments: ",
+    if (!all(req_clust_args %in% clust_nms))
+      stop("'clust_control' must include the following named arguments: ",
            paste(req_clust_args, collapse = ", "))
     if (clust_control$L < 1)
       stop("In clust_control, 'L' should be a positive integer.")
@@ -276,23 +296,39 @@ simjm <- function(n = 200, M = 1,
   betaLong_aux        <- maybe_broadcast(betaLong_aux,        M)
   betaEvent_assoc     <- maybe_broadcast(betaEvent_assoc,     M)
 
-  # Draw individual-level random effects
+  # Draw individual-level REs
   b_dim <- sapply(random_trajectory, function(x)
     switch(x,
            none   = 1L, # random intercepts model
            linear = 2L, # random slopes model
            poly   = 3L) # random poly (degree = 2) model
   )
-  b_dim_total <- sum(b_dim) # total num of individual-level random effects
-  if (length(unique(b_dim)) == 1L) { # same num of reffs in each submodel
+  b_dim_total <- sum(b_dim) # total num of individual-level REs
+
+  # Validate b_sd
+  if (length(unique(b_dim)) == 1L) { # same num of REs in each submodel
     if (length(b_sd) == b_dim[1]) {
       b_sd <- rep(b_sd, times = M)
     }
   }
   if (!length(b_sd) == b_dim_total)
     stop("'b_sd' appears to be the wrong length.")
-  b_corr_mat <- matrix(rep(b_rho, b_dim_total ^ 2), ncol = b_dim_total)
-  diag(b_corr_mat) <- 1
+
+  # Validate b_rho
+  if (b_dim_total == 1) { # only one RE, no corr matrix needed
+    b_corr_mat = matrix(1,1,1)
+  } else { # >1 RE, requires corr matrix
+    if (is.scalar(b_rho) && b_dim_total > 1L) {
+      # user supplied a constant correlation term for REs
+      b_corr_mat <- matrix(rep(b_rho, b_dim_total ^ 2), ncol = b_dim_total)
+      diag(b_corr_mat) <- 1
+    } else {
+      # user supplied a correlation matrix for REs
+      b_corr_mat <- validate_corr_matrix(b_rho)
+    }
+  }
+
+  # Draw standardised REs and scale them by b_sd
   b_dd <- MASS::mvrnorm(n = n, mu = rep(0, b_dim_total), Sigma = b_corr_mat)
   b <- sapply(1:length(b_sd), function(x) b_sd[x] * b_dd[,x])
   colnames(b) <- paste0("b", 1:b_dim_total)
@@ -310,8 +346,22 @@ simjm <- function(n = 200, M = 1,
       stop("In clust_control, 'u_sd' appears to be the wrong length. ",
            "Should be length ", u_dim, ".")
     Li <- as.integer(stats::runif(n, 1, L+1)) # num units within each individual
-    u_corr_mat <- matrix(rep(b_rho, u_dim ^ 2), ncol = u_dim)
-    diag(u_corr_mat) <- 1
+    if (u_dim == 1) { # only one RE, no corr matrix needed
+      u_corr_mat = matrix(1,1,1)
+    } else { # >1 RE, requires corr matrix
+      u_rho <- clust_control$u_rho
+      if (is.null(u_rho))
+        stop("'u_rho' must be provided in the clust_control list when there is ",
+             "more than one random effect for the lower level clustering factor.")
+      if (is.scalar(u_rho) && u_dim > 1L) {
+        # user supplied a constant correlation term for REs
+        u_corr_mat <- matrix(rep(u_rho, u_dim ^ 2), ncol = u_dim)
+        diag(u_corr_mat) <- 1
+      } else {
+        # user supplied a correlation matrix for REs
+        u_corr_mat <- validate_corr_matrix(u_rho)
+      }
+    }
     u_dd <- MASS::mvrnorm(n = sum(Li), mu = rep(0, u_dim), Sigma = u_corr_mat)
     u <- sapply(1:length(clust_control$u_sd), function(x) u_sd[x] * u_dd[,x])
     colnames(u) <- paste0("u", 1:u_dim)
@@ -396,7 +446,11 @@ simjm <- function(n = 200, M = 1,
   trajectory <- random_trajectory
   if (has_clust) {
     sel <- which(!marker1_traj_types == "none")
-    trajectory[1L] <- marker1_traj_types[sel]
+    if (!length(sel)) {
+      trajectory[1L] <- "none"
+    } else {
+      trajectory[1L] <- marker1_traj_types[sel]
+    }
   }
 
   #----- Data
