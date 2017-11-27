@@ -195,6 +195,22 @@
 #'                    u_rho = 0.2
 #'                  ))
 #'
+#' # Simulate two longitudinal markers, where the first longitudinal
+#' # marker has a linear trajectory, and the second marker has
+#' # quadratic trajectory. We will specify a correlation matrix for
+#' # the individual-level random effects (via the 'b_rho' argument).
+#' corrmat <- matrix(c(
+#'   1.0, 0.2, 0.5, 0.0, 0.0,
+#'   0.2, 1.0, 0.0, 0.2, 0.0,
+#'   0.5, 0.0, 1.0, 0.3, 0.0,
+#'   0.0, 0.2, 0.3, 1.0, -.1,
+#'   0.0, 0.0, 0.0, -.1, 1.0), ncol = 5)
+#' simdat6 <- simjm(M = 2, n = 30,
+#'                  random_trajectory = c("linear", "poly"),
+#'                  b_sd = c(2, 1, 2, 1, 0.5),
+#'                  b_rho = corrmat,
+#'                  betaEvent_assoc = c(0.1, 0.2))
+#'
 simjm <- function(n = 200, M = 1,
                   random_trajectory = "linear",
                   assoc = "etavalue",

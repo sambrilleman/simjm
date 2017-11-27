@@ -14,13 +14,9 @@ is.scalar <- function(x) {
 validate_corr_matrix <- function(x) {
   if (is.null(x) || !is.matrix(x))
     stop2("'b_rho' should be a scalar or a correlation matrix.")
-  if (!all(diag(x) == 1))
-    stop2("'b_rho' should be a scalar or a correlation matrix.")
-  if (!x[lower.tri(x)] == x[upper.tri(x)])
-    stop2("'b_rho' should be a scalar or a correlation matrix.")
-  if (!all(x[lower.tri(x)]) >= 0)
-    stop2("'b_rho' should be a scalar or a correlation matrix.")
-  if (!all(x[lower.tri(x)]) <= 1)
+  if (!all(diag(x) == 1) ||
+      !all(abs(x)  <= 1) ||
+      !all(x[lower.tri(x)] == t(x)[lower.tri(x)]))
     stop2("'b_rho' should be a scalar or a correlation matrix.")
   as.matrix(x)
 }
