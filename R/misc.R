@@ -1,7 +1,32 @@
-# Code chunks taken from the 'rstanarm' R package, obtained under
-# the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 3 of the License, or
+# Copyright (C) 2017,2018 Sam Brilleman
+
+# Error message with call. set to FALSE
+stop2 <- function(...) {
+  stop(..., call. = FALSE)
+}
+
+# Check if x is a numeric scalar
+is.scalar <- function(x) {
+  length(x) == 1L && is.vector(x) && is.numeric(x)
+}
+
+# Check x is a valid correlation matrix
+validate_corr_matrix <- function(x) {
+  if (is.null(x) || !is.matrix(x))
+    stop2("'b_rho' should be a scalar or a correlation matrix.")
+  if (!all(diag(x) == 1) ||
+      !all(abs(x)  <= 1) ||
+      !all(x[lower.tri(x)] == t(x)[lower.tri(x)]))
+    stop2("'b_rho' should be a scalar or a correlation matrix.")
+  as.matrix(x)
+}
+
+#------------------------------
+# Below are code chunks taken from the 'rstanarm' R package, obtained
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
+#
 # Copyright (C) 2017 Trustees of Columbia University
 
 # Draw from inverse Gaussian distribution

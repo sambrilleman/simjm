@@ -84,11 +84,19 @@ or a vector, depending on how many auxiliary parameters are required for
 specifying the baseline hazard.}
 
 \item{b_sd}{A list, with each element of the list containing the vector of
-standard deviations for the random effects relating to one grouping factor.}
+standard deviations for the individual-level random effects.}
 
-\item{b_rho}{Correlation between the random effects. This is assumed to be
-the correlation between all random effects within a grouping factor, and
-the same correlation is used for each grouping factor.}
+\item{b_rho}{Correlation between the individual-level random effects. This is
+only relevant when there is a total of >1 individual-level random effects in
+the joint model. This can be specified as a scalar correlation term, which
+assumes the same (true) correlation
+between each of the individual-level random effects, or it can be a correlation
+matrix for the correlation between the individual-level random effects. When
+simulating data for a multivariate joint model, the structure of the
+correlation matrix is such that the first \eqn{K_1} columns/rows correspond
+to the individual-level random effects for the first longitudinal submodel,
+and the next \eqn{K_2} columns/rows correspond to the individual-level random
+effects for the second longitudinal submodel, and so on.}
 
 \item{prob_Z1}{Probability for the binary covariate included in each of the
 submodels.}
@@ -128,7 +136,12 @@ indicates that the association structure should be based on the mean
 (i.e. average) taken across the lower level units clustered within an
 individual.}
 \item{u_sd}{Numeric vector providing the standard deviations of the random
-effect at the cluster level.}
+effects at the cluster level.}
+\item{u_rho}{A scalar or a correlation matrix providing the correlation
+between the random effects for the lower level clustering factor. This is
+only relevant if there are >1 random effects for the lower level clustering
+factor. This is specified in a similar way as the \code{b_rho} argument
+described above.}
 \item{random_trajectory}{The desired type of trajectory in the random effects
 part of the longitudinal model at the cluster level. Can be \code{"none"} to
 only include a random intercept at the cluster level, or otherwise
@@ -217,7 +230,24 @@ simdat5 <- simjm(M = 1, n = 30,
                    L = 6,
                    assoc = "sum",
                    random_trajectory = "linear",
-                   u_sd = c(1,1)
+                   u_sd = c(1,1),
+                   u_rho = 0.2
                  ))
+
+# Simulate two longitudinal markers, where the first longitudinal
+# marker has a linear trajectory, and the second marker has
+# quadratic trajectory. We will specify a correlation matrix for
+# the individual-level random effects (via the 'b_rho' argument).
+corrmat <- matrix(c(
+  1.0, 0.2, 0.5, 0.0, 0.0,
+  0.2, 1.0, 0.0, 0.2, 0.0,
+  0.5, 0.0, 1.0, 0.3, 0.0,
+  0.0, 0.2, 0.3, 1.0, -.1,
+  0.0, 0.0, 0.0, -.1, 1.0), ncol = 5)
+simdat6 <- simjm(M = 2, n = 30,
+                 random_trajectory = c("linear", "poly"),
+                 b_sd = c(2, 1, 2, 1, 0.5),
+                 b_rho = corrmat,
+                 betaEvent_assoc = c(0.1, 0.2))
 
 }
