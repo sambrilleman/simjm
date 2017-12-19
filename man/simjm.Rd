@@ -26,7 +26,7 @@ character vector of length M (if a different trajectory type is to be used
 for each longitudinal submodel). If \code{random_trajectory = "linear"} or
 \code{random_trajectory = "none"} then a fixed effect linear
 slope is also included in the longitudinal submodel. If
-\code{random_trajectory = "poly"} then fixed effect
+\code{random_trajectory = "poly"} then fixed effect linear and
 quadratic terms are also included in the longitudinal submodel.}
 
 \item{assoc}{A character string, or a character vector of length M,
@@ -50,7 +50,8 @@ longitudinal submodel. Can be a scalar or a vector of length M.}
 longitudinal submodel. Can be a scalar or a vector of length M.}
 
 \item{betaLong_slope}{True coefficient for the fixed effect slope in the
-longitudinal submodel. Can be a scalar or a vector of length M.}
+longitudinal submodel when \code{random_trajectory = "linear"} or
+\code{random_trajectory = "none"}. Can be a scalar or a vector of length M.}
 
 \item{betaLong_poly1}{True coefficient for the fixed effect linear term
 in the longitudinal submodel when \code{random_trajectory = "poly"}. Can be
