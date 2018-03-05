@@ -79,8 +79,12 @@
 #'   to the individual-level random effects for the first longitudinal submodel,
 #'   and the next \eqn{K_2} columns/rows correspond to the individual-level random
 #'   effects for the second longitudinal submodel, and so on.
-#' @param max_yobs The maximum allowed number of longitudinal measurements. The
-#'   actual number of observed measurements will depend on the individuals event time.
+#' @param max_yobs The maximum allowed number of longitudinal measurements for
+#'   each biomarker. The actual number of observed measurements will depend on the
+#'   individuals event time. Every individual is forced to have at least a baseline
+#'   measurement for each biomarker (i.e. a biomarker measurement at time 0). The
+#'   remaining biomarker measurement times will be uniformly distributed between 0
+#'   and \code{max_fuptime}.
 #' @param max_fuptime The maximum follow up time in whatever the desired time
 #'   units are. This time will also be used as the censoring time (i.e. for
 #'   individuals who have a simulated survival time that is after \code{max_fuptime}).
@@ -243,8 +247,11 @@ simjm <- function(n = 200, M = 1,
 
   basehaz <- match.arg(basehaz)
 
+  if (max_yobs < 1)
+    stop("'max_yobs' must be at least 1.")
+
   ok_assocs <- c("etavalue", "etaslope", "etaauc", "muvalue",
-                 "shared_b(1)", "shared_coef(1)",
+                 "null", "shared_b(1)", "shared_coef(1)",
                  "shared_b(2)", "shared_coef(2)")
   assoc <- maybe_broadcast(assoc, M)
   if (!all(assoc %in% ok_assocs))
@@ -496,8 +503,10 @@ simjm <- function(n = 200, M = 1,
     nm <- paste0("Long", m)
     dat[[nm]] <- merge(betas[[nm]], dat[["Event"]])
     dat[[nm]] <- merge(dat[[nm]], covs)
-    dat[[nm]] <- dat[[nm]][rep(row.names(dat[[nm]]), max_yobs), ] # multiple row per subject
-    dat[[nm]]$tij <- stats::runif(nrow(dat[[nm]]), 0, max_fuptime)       # create observation times
+    dat[[nm]] <- dat[[nm]][rep(row.names(dat[[nm]]), max_yobs), ]  # multiple row per subject
+    dat[[nm]]$tij <- # create observation times
+      c(rep(0, nrow(betas[[nm]])), # baseline times
+        stats::runif(nrow(dat[[nm]]) - nrow(betas[[nm]]), 0, max_fuptime)) # post-baseline times
     if (has_clust && m == 1) { # sort on ID, cluster ID and time
       dat[[nm]] <- dat[[nm]][order(dat[[nm]]$id, dat[[nm]]$clust_id, dat[[nm]]$tij), ]
     } else { # sort on ID and time
@@ -646,14 +655,12 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
       }
     } else res_etavalue_m <- etavalue_m
 
-    # eta value
     if (assoc[m] == "etavalue") {
+      # eta value
       etaevent <- etaevent +
         betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etavalue_m
-    }
-
-    # eta slope
-    if (assoc[m] == "etaslope") {
+    } else if (assoc[m] == "etaslope") {
+      # eta slope
       if (trajectory[m] %in% c("none", "linear")) {
         # if no random slope, then still use fixed linear slope
         etaslope_m <-
@@ -672,10 +679,8 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
       } else res_etaslope_m <- etaslope_m
       etaevent <- etaevent +
         betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etaslope_m
-    }
-
-    # eta auc
-    if (assoc[m] == "etaauc") {
+    } else if (assoc[m] == "etaauc") {
+      # eta auc
       if (trajectory[m] %in% c("none", "linear")) {
         etaauc_m <-
           etabaseline_m * t +
@@ -689,10 +694,8 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
              "when there is lower level clustering within individuals.")
       etaevent <- etaevent +
         betas[["Event"]][[paste0("betaEvent_assoc", m)]] * etaauc_m
-    }
-
-    # mu value
-    if (assoc[m] == "muvalue") {
+    } else if (assoc[m] == "muvalue") {
+      # mu value
       invlink <- family[[m]]$invlink
       muvalue_m <- invlink(etavalue_m)
       if (!is.null(grp_assoc)) {

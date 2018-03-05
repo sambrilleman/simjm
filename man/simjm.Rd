@@ -107,8 +107,12 @@ in each of the submodels.}
 \item{sd_Z2}{Standard deviation of the (normally distributed) continuous
 covariate included in each of the submodels.}
 
-\item{max_yobs}{The maximum allowed number of longitudinal measurements. The
-actual number of observed measurements will depend on the individuals event time.}
+\item{max_yobs}{The maximum allowed number of longitudinal measurements for
+each biomarker. The actual number of observed measurements will depend on the
+individuals event time. Every individual is forced to have at least a baseline
+measurement for each biomarker (i.e. a biomarker measurement at time 0). The
+remaining biomarker measurement times will be uniformly distributed between 0
+and \code{max_fuptime}.}
 
 \item{max_fuptime}{The maximum follow up time in whatever the desired time
 units are. This time will also be used as the censoring time (i.e. for
