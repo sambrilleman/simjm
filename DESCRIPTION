@@ -1,7 +1,7 @@
 Package: simjm
 Type: Package
 Title: Simulate Joint Longitudinal and Survival Data
-Version: 0.0.0
+Version: 0.0.0-9000
 Authors@R: c(person("Sam", "Brilleman", email = "sam.brilleman@monash.edu", 
              role = c("cre", "aut", "cph")),
              person("Trustees of", "Columbia University", role = "cph",
@@ -12,7 +12,7 @@ Description: Simulates data from a joint longitudinal and survival model. The
     than one longitudinal marker) joint model.
 License: GPL (>=3) | file LICENSE
 Depends:
-    R (>= 3.3.2),
+    R (>= 3.3.0),
 Imports:
     MASS,
     methods,
