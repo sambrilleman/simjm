@@ -84,10 +84,19 @@
 #'   individuals event time. Every individual is forced to have at least a baseline
 #'   measurement for each biomarker (i.e. a biomarker measurement at time 0). The
 #'   remaining biomarker measurement times will be uniformly distributed between 0
-#'   and \code{max_fuptime}.
+#'   and \code{max_fuptime} if \code{balanced = FALSE}, or evenly spaced between
+#'   0 and \code{max_fuptime} if \code{balanced = TRUE}.
 #' @param max_fuptime The maximum follow up time in whatever the desired time
 #'   units are. This time will also be used as the censoring time (i.e. for
 #'   individuals who have a simulated survival time that is after \code{max_fuptime}).
+#' @param balanced A logical, specifying whether the timings of the longitudinal
+#'   measurements should be balanced across individuals. If \code{FALSE} (the
+#'   default), then each individual will have a baseline longitudinal measurement
+#'   and the remaining measurement times will be chosen randomly from a uniform
+#'   distribution on the range \code{[0,max_fuptime]}. If \code{TRUE}, then each
+#'   individual will have a baseline longitudinal measurement and the remaining
+#'   measurement times will be at common times for each individual, chosen to be
+#'   evenly spaced between \code{[0,max_fuptime]}.
 #' @param family A family for the the longitudinal submodel, or for a multivariate
 #'   joint model this can be a list of families. See \code{\link[stats]{glm}} and
 #'   \code{\link[stats]{family}}.
@@ -236,6 +245,7 @@ simjm <- function(n = 200, M = 1,
                   mean_Z2 = 0, sd_Z2 = 1,
                   max_yobs = 10,
                   max_fuptime = 5,
+                  balanced = FALSE,
                   family = gaussian,
                   clust_control = list(),
                   seed = sample.int(.Machine$integer.max, 1),
@@ -504,9 +514,15 @@ simjm <- function(n = 200, M = 1,
     dat[[nm]] <- merge(betas[[nm]], dat[["Event"]])
     dat[[nm]] <- merge(dat[[nm]], covs)
     dat[[nm]] <- dat[[nm]][rep(row.names(dat[[nm]]), max_yobs), ]  # multiple row per subject
-    dat[[nm]]$tij <- # create observation times
-      c(rep(0, nrow(betas[[nm]])), # baseline times
-        stats::runif(nrow(dat[[nm]]) - nrow(betas[[nm]]), 0, max_fuptime)) # post-baseline times
+    # create observation times
+    if (balanced) { # longitudinal observation times balanced across individuals
+      tij_seq  <- max_fuptime * 0:(max_yobs - 1) / max_yobs # baseline and post-baseline
+      dat[[nm]]$tij <- rep(tij_seq, each = nrow(betas[[nm]]))
+    } else { # longitudinal observation times unbalanced across individuals
+      tij_seq1 <- rep(0, nrow(betas[[nm]])) # baseline
+      tij_seq2 <- stats::runif(nrow(dat[[nm]]) - nrow(betas[[nm]]), 0, max_fuptime) # post-baseline
+      dat[[nm]]$tij <- c(tij_seq1, tij_seq2)
+    }
     if (has_clust && m == 1) { # sort on ID, cluster ID and time
       dat[[nm]] <- dat[[nm]][order(dat[[nm]]$id, dat[[nm]]$clust_id, dat[[nm]]$tij), ]
     } else { # sort on ID and time
@@ -590,7 +606,8 @@ simjm <- function(n = 200, M = 1,
   # Return object
   structure(ret, params = c(long_params, event_params, re_params),
             n = length(unique(ret$Event$id)), M = M,
-            max_yobs = max_yobs, max_fuptime = max_fuptime, assoc = assoc,
+            max_yobs = max_yobs, max_fuptime = max_fuptime,
+            balanced = balanced, assoc = assoc,
             family = family, random_trajectory = random_trajectory,
             clust_control = clust_control, seed = seed)
 }

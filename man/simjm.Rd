@@ -11,7 +11,7 @@ simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
   betaEvent_binary = 1, betaEvent_continuous = 0, betaEvent_assoc = 0.2,
   betaEvent_aux = 1.2, b_sd = c(2, 1), b_rho = -0.2, prob_Z1 = 0.5,
   mean_Z2 = 0, sd_Z2 = 1, max_yobs = 10, max_fuptime = 5,
-  family = gaussian, clust_control = list(),
+  balanced = FALSE, family = gaussian, clust_control = list(),
   seed = sample.int(.Machine$integer.max, 1), interval = c(1e-08, 200))
 }
 \arguments{
@@ -112,11 +112,21 @@ each biomarker. The actual number of observed measurements will depend on the
 individuals event time. Every individual is forced to have at least a baseline
 measurement for each biomarker (i.e. a biomarker measurement at time 0). The
 remaining biomarker measurement times will be uniformly distributed between 0
-and \code{max_fuptime}.}
+and \code{max_fuptime} if \code{balanced = FALSE}, or evenly spaced between
+0 and \code{max_fuptime} if \code{balanced = TRUE}.}
 
 \item{max_fuptime}{The maximum follow up time in whatever the desired time
 units are. This time will also be used as the censoring time (i.e. for
 individuals who have a simulated survival time that is after \code{max_fuptime}).}
+
+\item{balanced}{A logical, specifying whether the timings of the longitudinal
+measurements should be balanced across individuals. If \code{FALSE} (the
+default), then each individual will have a baseline longitudinal measurement
+and the remaining measurement times will be chosen randomly from a uniform
+distribution on the range \code{[0,max_fuptime]}. If \code{TRUE}, then each
+individual will have a baseline longitudinal measurement and the remaining
+measurement times will be at common times for each individual, chosen to be
+evenly spaced between \code{[0,max_fuptime]}.}
 
 \item{family}{A family for the the longitudinal submodel, or for a multivariate
 joint model this can be a list of families. See \code{\link[stats]{glm}} and
