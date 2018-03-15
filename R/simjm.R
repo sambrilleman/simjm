@@ -665,10 +665,13 @@ simjm <- function(n = 200, M = 1,
     b_sd,
     b_corr = b_corr_mat
   )
+  cov_params <- nlist(
+    prob_Z1, mean_Z2, sd_Z2
+  )
 
   # Return object
   structure(ret,
-            params = c(long_params, event_params, re_params),
+            params = c(long_params, event_params, re_params, cov_params),
             n = length(unique(ret$Event$id)),
             M = M,
             max_yobs = max_yobs,

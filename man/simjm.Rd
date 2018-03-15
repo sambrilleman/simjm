@@ -4,7 +4,7 @@
 \alias{simjm}
 \title{Simulate data for a univariate or multivariate joint model}
 \usage{
-simjm(n = 200, M = 1, fixed_trajectory = "linear",
+simjm(n = 200, M = 1, fixed_trajectory = "cubic",
   random_trajectory = "linear", assoc = "etavalue",
   basehaz = c("weibull"), betaLong_intercept = 10, betaLong_binary = -1,
   betaLong_continuous = 1, betaLong_linear = -0.25,
