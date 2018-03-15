@@ -4,14 +4,16 @@
 \alias{simjm}
 \title{Simulate data for a univariate or multivariate joint model}
 \usage{
-simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
-  basehaz = c("weibull"), betaLong_intercept = 0, betaLong_binary = 1,
-  betaLong_continuous = 1, betaLong_slope = 1, betaLong_poly1 = 1,
-  betaLong_poly2 = 0.5, betaLong_aux = 1, betaEvent_intercept = -4,
-  betaEvent_binary = 1, betaEvent_continuous = 0, betaEvent_assoc = 0.2,
-  betaEvent_aux = 1.2, b_sd = c(2, 1), b_rho = -0.2, prob_Z1 = 0.5,
-  mean_Z2 = 0, sd_Z2 = 1, max_yobs = 10, max_fuptime = 5,
-  balanced = FALSE, family = gaussian, clust_control = list(),
+simjm(n = 200, M = 1, fixed_trajectory = "linear",
+  random_trajectory = "linear", assoc = "etavalue",
+  basehaz = c("weibull"), betaLong_intercept = 10, betaLong_binary = -1,
+  betaLong_continuous = 1, betaLong_linear = -0.25,
+  betaLong_quadratic = 0.03, betaLong_cubic = -0.0015, betaLong_aux = 0.5,
+  betaEvent_intercept = -7.5, betaEvent_binary = -0.5,
+  betaEvent_continuous = 0.5, betaEvent_assoc = 0.5, betaEvent_aux = 1.2,
+  b_sd = c(1.5, 0.07), b_rho = -0.2, prob_Z1 = 0.5, mean_Z2 = 0,
+  sd_Z2 = 1, max_yobs = 10, max_fuptime = 20, balanced = FALSE,
+  family = gaussian, clust_control = list(), return_eta = FALSE,
   seed = sample.int(.Machine$integer.max, 1), interval = c(1e-08, 200))
 }
 \arguments{
@@ -19,15 +21,30 @@ simjm(n = 200, M = 1, random_trajectory = "linear", assoc = "etavalue",
 
 \item{M}{Number of longitudinal markers}
 
+\item{fixed_trajectory}{The desired type of trajectory in the fixed effects
+part of the longitudinal model. Can be \code{"none"} (intercept only),
+\code{"linear"} (the default, intercept and linear slope),
+\code{"quadratic"} (intercept, linear slope, and quadratic term),
+or \code{"cubic"} (intercept, linear slope, quadratic term, and
+cubic term). Can be a single character string, or a character
+vector of length M (if a different trajectory type is to be used
+for each longitudinal submodel). Note that in addition to these time
+effects, two baseline covariates (one binary and one continuous) are
+always included in the longitudinal submodel as well.}
+
 \item{random_trajectory}{The desired type of trajectory in the random effects
-part of the longitudinal model. Can be \code{"linear"} (the default),
-\code{"poly"}, or \code{"none"}. Can be a single character string, or a
-character vector of length M (if a different trajectory type is to be used
-for each longitudinal submodel). If \code{random_trajectory = "linear"} or
-\code{random_trajectory = "none"} then a fixed effect linear
-slope is also included in the longitudinal submodel. If
-\code{random_trajectory = "poly"} then fixed effect linear and
-quadratic terms are also included in the longitudinal submodel.}
+part of the longitudinal model. Can be \code{"none"} (random intercept only),
+\code{"linear"} (the default, random intercept and linear slope),
+\code{"quadratic"} (random intercept, linear slope, and quadratic term),
+or \code{"cubic"} (random intercept, linear slope, quadratic term, and
+cubic term). Can be a single character string, or a character
+vector of length M (if a different trajectory type is to be used
+for each longitudinal submodel). Note that the corresponding
+\code{fixed_trajectory} argument must be at least as complex as the
+random effect structure; for example, you cannot specify
+\code{fixed_trajectory = "linear"} and \code{random_trajectory = "cubic"},
+because there would be no corresponding fixed effects parameters for
+the quadratic and cubic random terms in the model.}
 
 \item{assoc}{A character string, or a character vector of length M,
 specifying the desired type of association structure for
@@ -49,17 +66,18 @@ longitudinal submodel. Can be a scalar or a vector of length M.}
 \item{betaLong_continuous}{True coefficient for the continuous covariate in the
 longitudinal submodel. Can be a scalar or a vector of length M.}
 
-\item{betaLong_slope}{True coefficient for the fixed effect slope in the
-longitudinal submodel when \code{random_trajectory = "linear"} or
-\code{random_trajectory = "none"}. Can be a scalar or a vector of length M.}
+\item{betaLong_linear}{True coefficient for the fixed effect linear term in
+the longitudinal submodel when \code{fixed_trajectory = "linear"},
+\code{fixed_trajectory = "quadratic"} or \code{fixed_trajectory = "cubic"}.
+Can be a scalar or a vector of length M.}
 
-\item{betaLong_poly1}{True coefficient for the fixed effect linear term
-in the longitudinal submodel when \code{random_trajectory = "poly"}. Can be
-a scalar or a vector of length M.}
+\item{betaLong_quadratic}{True coefficient for the fixed effect quadratic term
+in the longitudinal submodel when \code{fixed_trajectory = "quadratic"} or
+\code{fixed_trajectory = "cubic"}. Can be a scalar or a vector of length M.}
 
-\item{betaLong_poly2}{True coefficient for the fixed effect quadratic term
-in the longitudinal submodel when \code{random_trajectory = "poly"}. Can
-be a scalar or a vector of length M.}
+\item{betaLong_cubic}{True coefficient for the fixed effect cubic term in
+the longitudinal submodel when \code{fixed_trajectory = "cubic"}.
+Can be a scalar or a vector of length M.}
 
 \item{betaLong_aux}{True parameter value for the auxiliary parameter in the
 longitudinal submodel (sigma for Gaussian models, number of trials for
@@ -159,8 +177,15 @@ described above.}
 \item{random_trajectory}{The desired type of trajectory in the random effects
 part of the longitudinal model at the cluster level. Can be \code{"none"} to
 only include a random intercept at the cluster level, or otherwise
-\code{"linear"} or \code{"poly"}.}
+\code{"linear"} to include a random intercept and linear slope term.}
 }}
+
+\item{return_eta}{A logical, if \code{return_eta = TRUE}, then the simulated
+data will also include the value of longitudinal submodel's linear predictor
+evaluated at the various measurement times. These will be stored in the
+variables named \code{Xij_1}, \code{Xij_2}, etc. (Note that if
+\code{family = "gaussian"} then these are equivalent to the error-free
+values of the biomarker at the measurement times).}
 
 \item{seed}{An optional \code{\link[=set.seed]{seed}}.}
 
@@ -223,7 +248,7 @@ simdat4 <- simjm(M = 1, n = 30,
                  betaLong_intercept = 1.3,
                  betaLong_binary = -0.6,
                  betaLong_continuous = -0.03,
-                 betaLong_slope = 0.05,
+                 betaLong_linear = 0.05,
                  b_sd = c(1, 0.05),
                  betaEvent_intercept = -9,
                  betaEvent_assoc = 0.3,
@@ -237,6 +262,7 @@ simdat4 <- simjm(M = 1, n = 30,
 # structure is based on a summation of the expected values for
 # each of the lower level units.
 simdat5 <- simjm(M = 1, n = 30,
+                 fixed_trajectory = "linear",
                  random_trajectory = "none",
                  betaLong_intercept = -1,
                  b_sd = 1,
@@ -259,7 +285,8 @@ corrmat <- matrix(c(
   0.0, 0.2, 0.3, 1.0, -.1,
   0.0, 0.0, 0.0, -.1, 1.0), ncol = 5)
 simdat6 <- simjm(M = 2, n = 30,
-                 random_trajectory = c("linear", "poly"),
+                 fixed_trajectory = c("linear", "quadratic"),
+                 random_trajectory = c("linear", "quadratic"),
                  b_sd = c(2, 1, 2, 1, 0.5),
                  b_rho = corrmat,
                  betaEvent_assoc = c(0.1, 0.2))

@@ -1,3 +1,5 @@
+# Copyright (C) 2017,2018 Sam Brilleman
+
 #' Plot observed longitudinal trajectories using facets
 #'
 #' This is a convenience function that allows the user to easily plot the

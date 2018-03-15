@@ -144,6 +144,12 @@
 #'   only include a random intercept at the cluster level, or otherwise
 #'   \code{"linear"} to include a random intercept and linear slope term.}
 #'   }
+#' @param return_eta A logical, if \code{return_eta = TRUE}, then the simulated
+#'   data will also include the value of longitudinal submodel's linear predictor
+#'   evaluated at the various measurement times. These will be stored in the
+#'   variables named \code{Xij_1}, \code{Xij_2}, etc. (Note that if
+#'   \code{family = "gaussian"} then these are equivalent to the error-free
+#'   values of the biomarker at the measurement times).
 #' @param seed An optional \code{\link[=set.seed]{seed}}.
 #' @param interval The interval over which to search for the
 #'   \code{\link[stats]{uniroot}} corresponding to each simulated event time.
@@ -242,30 +248,31 @@
 #'                  betaEvent_assoc = c(0.1, 0.2))
 #'
 simjm <- function(n = 200, M = 1,
-                  fixed_trajectory = "linear",
+                  fixed_trajectory = "cubic",
                   random_trajectory = "linear",
                   assoc = "etavalue",
                   basehaz = c("weibull"),
-                  betaLong_intercept = 0,
-                  betaLong_binary = 1,
+                  betaLong_intercept = 10,
+                  betaLong_binary = -1,
                   betaLong_continuous = 1,
-                  betaLong_linear = 1,
-                  betaLong_quadratic = .4,
-                  betaLong_cubic = -.05,
-                  betaLong_aux = 1,
-                  betaEvent_intercept = -4,
-                  betaEvent_binary = 1,
-                  betaEvent_continuous = 0,
-                  betaEvent_assoc = 0.2,
+                  betaLong_linear = -0.25,
+                  betaLong_quadratic = 0.03,
+                  betaLong_cubic = -0.0015,
+                  betaLong_aux = 0.5,
+                  betaEvent_intercept = -7.5,
+                  betaEvent_binary = -0.5,
+                  betaEvent_continuous = 0.5,
+                  betaEvent_assoc = 0.5,
                   betaEvent_aux = 1.2,
-                  b_sd = c(2,1), b_rho = -0.2,
+                  b_sd = c(1.5, 0.07), b_rho = -0.2,
                   prob_Z1 = 0.5,
                   mean_Z2 = 0, sd_Z2 = 1,
                   max_yobs = 10,
-                  max_fuptime = 5,
+                  max_fuptime = 20,
                   balanced = FALSE,
                   family = gaussian,
                   clust_control = list(),
+                  return_eta = FALSE,
                   seed = sample.int(.Machine$integer.max, 1),
                   interval = c(1E-8, 200)) {
 
@@ -613,7 +620,11 @@ simjm <- function(n = 200, M = 1,
   ret <- lapply(dat, function(x) {
     if ("tij" %in% colnames(x))
       x <- x[x$tij <= x$eventtime, ] # only keep rows before event time
-    sel <- grep("^id$|^clust|^Z|^tij|^Yij|eventtime|status", colnames(x))
+    if (return_eta) {
+      sel <- grep("^id$|^clust|^Z|^tij|^Yij|^Xij|eventtime|status", colnames(x))
+    } else {
+      sel <- grep("^id$|^clust|^Z|^tij|^Yij|eventtime|status", colnames(x))
+    }
     x <- x[, sel, drop = FALSE]
     rownames(x) <- NULL
     return(x)
@@ -667,8 +678,10 @@ simjm <- function(n = 200, M = 1,
             family = family,
             fixed_trajectory = fixed_trajectory,
             random_trajectory = random_trajectory,
+            return_eta = return_eta,
             clust_control = clust_control,
-            seed = seed)
+            seed = seed,
+            class = c("simjm", class(ret)))
 }
 
 
