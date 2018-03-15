@@ -11,15 +11,29 @@
 #'
 #' @param n Number of individuals
 #' @param M Number of longitudinal markers
+#' @param fixed_trajectory The desired type of trajectory in the fixed effects
+#'   part of the longitudinal model. Can be \code{"none"} (intercept only),
+#'   \code{"linear"} (the default, intercept and linear slope),
+#'   \code{"quadratic"} (intercept, linear slope, and quadratic term),
+#'   or \code{"cubic"} (intercept, linear slope, quadratic term, and
+#'   cubic term). Can be a single character string, or a character
+#'   vector of length M (if a different trajectory type is to be used
+#'   for each longitudinal submodel). Note that in addition to these time
+#'   effects, two baseline covariates (one binary and one continuous) are
+#'   always included in the longitudinal submodel as well.
 #' @param random_trajectory The desired type of trajectory in the random effects
-#'   part of the longitudinal model. Can be \code{"linear"} (the default),
-#'   \code{"poly"}, or \code{"none"}. Can be a single character string, or a
-#'   character vector of length M (if a different trajectory type is to be used
-#'   for each longitudinal submodel). If \code{random_trajectory = "linear"} or
-#'   \code{random_trajectory = "none"} then a fixed effect linear
-#'   slope is also included in the longitudinal submodel. If
-#'   \code{random_trajectory = "poly"} then fixed effect linear and
-#'   quadratic terms are also included in the longitudinal submodel.
+#'   part of the longitudinal model. Can be \code{"none"} (random intercept only),
+#'   \code{"linear"} (the default, random intercept and linear slope),
+#'   \code{"quadratic"} (random intercept, linear slope, and quadratic term),
+#'   or \code{"cubic"} (random intercept, linear slope, quadratic term, and
+#'   cubic term). Can be a single character string, or a character
+#'   vector of length M (if a different trajectory type is to be used
+#'   for each longitudinal submodel). Note that the corresponding
+#'   \code{fixed_trajectory} argument must be at least as complex as the
+#'   random effect structure; for example, you cannot specify
+#'   \code{fixed_trajectory = "linear"} and \code{random_trajectory = "cubic"},
+#'   because there would be no corresponding fixed effects parameters for
+#'   the quadratic and cubic random terms in the model.
 #' @param assoc A character string, or a character vector of length M,
 #'   specifying the desired type of association structure for
 #'   linking each longitudinal outcome to the hazard of the event.
@@ -35,15 +49,16 @@
 #'   longitudinal submodel. Can be a scalar or a vector of length M.
 #' @param betaLong_continuous True coefficient for the continuous covariate in the
 #'   longitudinal submodel. Can be a scalar or a vector of length M.
-#' @param betaLong_slope True coefficient for the fixed effect slope in the
-#'   longitudinal submodel when \code{random_trajectory = "linear"} or
-#'   \code{random_trajectory = "none"}. Can be a scalar or a vector of length M.
-#' @param betaLong_poly1 True coefficient for the fixed effect linear term
-#'   in the longitudinal submodel when \code{random_trajectory = "poly"}. Can be
-#'   a scalar or a vector of length M.
-#' @param betaLong_poly2 True coefficient for the fixed effect quadratic term
-#'   in the longitudinal submodel when \code{random_trajectory = "poly"}. Can
-#'   be a scalar or a vector of length M.
+#' @param betaLong_linear True coefficient for the fixed effect linear term in
+#'   the longitudinal submodel when \code{fixed_trajectory = "linear"},
+#'   \code{fixed_trajectory = "quadratic"} or \code{fixed_trajectory = "cubic"}.
+#'   Can be a scalar or a vector of length M.
+#' @param betaLong_quadratic True coefficient for the fixed effect quadratic term
+#'   in the longitudinal submodel when \code{fixed_trajectory = "quadratic"} or
+#'   \code{fixed_trajectory = "cubic"}. Can be a scalar or a vector of length M.
+#' @param betaLong_cubic True coefficient for the fixed effect cubic term in
+#'   the longitudinal submodel when \code{fixed_trajectory = "cubic"}.
+#'   Can be a scalar or a vector of length M.
 #' @param betaLong_aux True parameter value for the auxiliary parameter in the
 #'   longitudinal submodel (sigma for Gaussian models, number of trials for
 #'   binomial models, size for negative binomial models, shape for Gamma models,
@@ -127,7 +142,7 @@
 #'   \item{random_trajectory}{The desired type of trajectory in the random effects
 #'   part of the longitudinal model at the cluster level. Can be \code{"none"} to
 #'   only include a random intercept at the cluster level, or otherwise
-#'   \code{"linear"} or \code{"poly"}.}
+#'   \code{"linear"} to include a random intercept and linear slope term.}
 #'   }
 #' @param seed An optional \code{\link[=set.seed]{seed}}.
 #' @param interval The interval over which to search for the
@@ -183,7 +198,7 @@
 #'                  betaLong_intercept = 1.3,
 #'                  betaLong_binary = -0.6,
 #'                  betaLong_continuous = -0.03,
-#'                  betaLong_slope = 0.05,
+#'                  betaLong_linear = 0.05,
 #'                  b_sd = c(1, 0.05),
 #'                  betaEvent_intercept = -9,
 #'                  betaEvent_assoc = 0.3,
@@ -197,6 +212,7 @@
 #' # structure is based on a summation of the expected values for
 #' # each of the lower level units.
 #' simdat5 <- simjm(M = 1, n = 30,
+#'                  fixed_trajectory = "linear",
 #'                  random_trajectory = "none",
 #'                  betaLong_intercept = -1,
 #'                  b_sd = 1,
@@ -219,21 +235,23 @@
 #'   0.0, 0.2, 0.3, 1.0, -.1,
 #'   0.0, 0.0, 0.0, -.1, 1.0), ncol = 5)
 #' simdat6 <- simjm(M = 2, n = 30,
-#'                  random_trajectory = c("linear", "poly"),
+#'                  fixed_trajectory = c("linear", "quadratic"),
+#'                  random_trajectory = c("linear", "quadratic"),
 #'                  b_sd = c(2, 1, 2, 1, 0.5),
 #'                  b_rho = corrmat,
 #'                  betaEvent_assoc = c(0.1, 0.2))
 #'
 simjm <- function(n = 200, M = 1,
+                  fixed_trajectory = "linear",
                   random_trajectory = "linear",
                   assoc = "etavalue",
                   basehaz = c("weibull"),
                   betaLong_intercept = 0,
                   betaLong_binary = 1,
                   betaLong_continuous = 1,
-                  betaLong_slope = 1,
-                  betaLong_poly1 = 1,
-                  betaLong_poly2 = 0.5,
+                  betaLong_linear = 1,
+                  betaLong_quadratic = .4,
+                  betaLong_cubic = -.05,
                   betaLong_aux = 1,
                   betaEvent_intercept = -4,
                   betaEvent_binary = 1,
@@ -260,6 +278,7 @@ simjm <- function(n = 200, M = 1,
   if (max_yobs < 1)
     stop("'max_yobs' must be at least 1.")
 
+  # Check input assoc is valid
   ok_assocs <- c("etavalue", "etaslope", "etaauc", "muvalue",
                  "null", "shared_b(1)", "shared_coef(1)",
                  "shared_b(2)", "shared_coef(2)")
@@ -267,18 +286,16 @@ simjm <- function(n = 200, M = 1,
   if (!all(assoc %in% ok_assocs))
     stop("'assoc' must be one of: ", paste(ok_assocs, collapse = ", "))
 
-  ok_trajs <- c("linear", "none", "poly")
+  # Check input to trajectory type is valid
+  ok_trajs  <- c("none", "linear", "quadratic", "cubic")
+  fixed_trajectory  <- maybe_broadcast(fixed_trajectory,  M)
   random_trajectory <- maybe_broadcast(random_trajectory, M)
+  if (!all(fixed_trajectory %in% ok_trajs))
+    stop("'fixed_trajectory' must be one of: ", paste(ok_trajs, collapse = ", "))
   if (!all(random_trajectory %in% ok_trajs))
-    stop("'assoc' must be one of: ", paste(ok_assocs, collapse = ", "))
+    stop("'random_trajectory' must be one of: ", paste(ok_trajs, collapse = ", "))
 
-  for (m in 1:M) {
-    shared_slope <- (assoc[m] %in% c("shared_b(2)", "shared_coef(2)"))
-    if (shared_slope && (!random_trajectory[m] == "linear"))
-      stop("Can only use 'shared_b(2)' or 'shared_coef(2)' when ",
-           "'random_trajectory' is linear.")
-  }
-
+  # Check family is valid
   if (!is(family, "list"))
     family <- list(family)
   family <- maybe_broadcast(family, M)
@@ -287,6 +304,25 @@ simjm <- function(n = 200, M = 1,
   lapply(family, function(x) if (!x$family %in% ok_families)
     stop("'family' must be one of: ", paste(ok_families, collapse = ", ")))
 
+  # Error check to ensure that the random effects structure isn't
+  # more complex than the corresponding fixed effects structure
+  fixed_traj_index  <- match(fixed_trajectory,  ok_trajs)
+  random_traj_index <- match(random_trajectory, ok_trajs)
+  sel <- which(random_traj_index > fixed_traj_index)
+  if (length(sel))
+    stop("The 'random_trajectory' cannot be more complex than the ",
+         "corresponding 'fixed_trajectory'. This problem was encountered ",
+         "for longitudinal submodel(s): ", paste(sel, collapse = ", "))
+
+  # Error checks for assoc type
+  for (m in 1:M) {
+    shared_slope <- (assoc[m] %in% c("shared_b(2)", "shared_coef(2)"))
+    if (shared_slope && (!random_trajectory[m] == "linear"))
+      stop("Can only use 'shared_b(2)' or 'shared_coef(2)' when ",
+           "'random_trajectory' is linear.")
+  }
+
+  # Check specified structure for any lower-level clustering
   has_clust <- !missing(clust_control)
   if (has_clust) { # has lower-level clustering within the individual
     if (!is(clust_control, "list"))
@@ -308,6 +344,9 @@ simjm <- function(n = 200, M = 1,
     if (!clust_control$assoc %in% ok_clust_assocs)
       stop("In clust_control, 'assoc' must be one of: ",
            paste(ok_clust_assocs, collapse = ", "))
+    ok_clust_trajs  <- c("none", "linear")
+    if (!(clust_control$random_trajectory %in% ok_clust_trajs))
+      stop("'clust_control$random_trajectory' must be one of: ", paste(ok_clust_trajs, collapse = ", "))
     marker1_traj_types <- c(random_trajectory[1L], clust_control$random_trajectory)
     if (!any(marker1_traj_types == "none")) {
       stop("If lower-level clustering within the individual is specified, ",
@@ -323,18 +362,19 @@ simjm <- function(n = 200, M = 1,
   betaLong_intercept  <- maybe_broadcast(betaLong_intercept,  M)
   betaLong_binary     <- maybe_broadcast(betaLong_binary,     M)
   betaLong_continuous <- maybe_broadcast(betaLong_continuous, M)
-  betaLong_slope      <- maybe_broadcast(betaLong_slope,      M)
-  betaLong_poly1      <- maybe_broadcast(betaLong_poly1,      M)
-  betaLong_poly2      <- maybe_broadcast(betaLong_poly2,      M)
+  betaLong_linear     <- maybe_broadcast(betaLong_linear,     M)
+  betaLong_quadratic  <- maybe_broadcast(betaLong_quadratic,  M)
+  betaLong_cubic      <- maybe_broadcast(betaLong_cubic,      M)
   betaLong_aux        <- maybe_broadcast(betaLong_aux,        M)
   betaEvent_assoc     <- maybe_broadcast(betaEvent_assoc,     M)
 
   # Draw individual-level REs
   b_dim <- sapply(random_trajectory, function(x)
     switch(x,
-           none   = 1L, # random intercepts model
-           linear = 2L, # random slopes model
-           poly   = 3L) # random poly (degree = 2) model
+           none      = 1L, # random intercepts model
+           linear    = 2L, # random slopes model
+           quadratic = 3L, # random quadratic terms
+           cubic     = 4L) # random cubic terms
   )
   b_dim_total <- sum(b_dim) # total num of individual-level REs
 
@@ -373,8 +413,7 @@ simjm <- function(n = 200, M = 1,
     u_sd <- clust_control$u_sd
     u_dim <- switch(clust_control$random_trajectory,
                     none   = 1L, # random intercepts model
-                    linear = 2L, # random slopes model
-                    poly   = 3L) # random poly (degree = 2) model
+                    linear = 2L) # random slopes model
     if (!length(u_sd) == u_dim)
       stop("In clust_control, 'u_sd' appears to be the wrong length. ",
            "Should be length ", u_dim, ".")
@@ -402,49 +441,58 @@ simjm <- function(n = 200, M = 1,
 
   # Construct data frame of parameters
   betas <- list()
+
+  # Longitudinal submodel parameters
   for (m in 1:M) {
     nm <- paste0("Long", m)
     betas[[nm]] <- data.frame(id = 1:n)
+
     # fixed effect parameters
     betas[[nm]][[paste0("betaLong_intercept", m)]] <- rep(betaLong_intercept[m], n)
     betas[[nm]][[paste0("betaLong_binary", m)]] <- rep(betaLong_binary[m], n)
     betas[[nm]][[paste0("betaLong_continuous", m)]] <- rep(betaLong_continuous[m], n)
-    if (random_trajectory[m] %in% c("none", "linear")) { # fixed effect slope
-      betas[[nm]][[paste0("betaLong_slope", m)]] <- rep(betaLong_slope[m], n)
-    } else if (random_trajectory[m] == "poly") { # fixed effect quadratic
-      betas[[nm]][[paste0("betaLong_poly1", m)]] <- rep(betaLong_poly1[m], n)
-      betas[[nm]][[paste0("betaLong_poly2", m)]] <- rep(betaLong_poly2[m], n)
+    if (fixed_trajectory[m] %in% c("linear", "quadratic", "cubic")) {
+      # fixed effect linear
+      betas[[nm]][[paste0("betaLong_linear", m)]] <- rep(betaLong_linear[m], n)
     }
+    if (fixed_trajectory[m] %in% c("quadratic", "cubic")) {
+      # fixed effect quadratic
+      betas[[nm]][[paste0("betaLong_quadratic", m)]] <- rep(betaLong_quadratic[m], n)
+    }
+    if (fixed_trajectory[m] %in% c("cubic")) {
+      # fixed effect cubic
+      betas[[nm]][[paste0("betaLong_cubic", m)]] <- rep(betaLong_cubic[m], n)
+    }
+
     # add on subject-specific intercept
     shift <- if (m == 1) 0 else sum(b_dim[1:(m - 1)])
     b_idx <- shift + 1
     betas[[nm]][[paste0("betaLong_intercept",  m)]] <-
       betas[[nm]][[paste0("betaLong_intercept",  m)]] + b[, b_idx]
-    # add on subject-specific linear slope
-    if (random_trajectory[m] == "linear") {
+
+    # add on subject-specific linear term
+    if (random_trajectory[m] %in% c("linear", "quadratic", "cubic")) {
       b_idx <- shift + 2
-      betas[[nm]][[paste0("betaLong_slope",  m)]] <-
-        betas[[nm]][[paste0("betaLong_slope",  m)]] + b[, b_idx]
+      betas[[nm]][[paste0("betaLong_linear",  m)]] <-
+        betas[[nm]][[paste0("betaLong_linear",  m)]] + b[, b_idx]
     }
-    # add on subject-specific quadratic terms
-    if (random_trajectory[m] == "poly") {
-      b_idx <- shift + 2 # index of first quadratic term
-      betas[[nm]][[paste0("betaLong_poly1",  m)]] <-
-        betas[[nm]][[paste0("betaLong_poly1",  m)]] + b[, b_idx]
-      b_idx <- shift + 3 # index of second quadratic term
-      betas[[nm]][[paste0("betaLong_poly2",  m)]] <-
-        betas[[nm]][[paste0("betaLong_poly2",  m)]] + b[, b_idx]
+
+    # add on subject-specific quadratic term
+    if (random_trajectory[m] %in% c("quadratic", "cubic")) {
+      b_idx <- shift + 3
+      betas[[nm]][[paste0("betaLong_quadratic",  m)]] <-
+        betas[[nm]][[paste0("betaLong_quadratic",  m)]] + b[, b_idx]
+    }
+
+    # add on subject-specific cubic term
+    if (random_trajectory[m] %in% c("cubic")) {
+      b_idx <- shift + 4
+      betas[[nm]][[paste0("betaLong_cubic",  m)]] <-
+        betas[[nm]][[paste0("betaLong_cubic",  m)]] + b[, b_idx]
     }
   }
-  betas[["Event"]] <- data.frame(
-    id = 1:n,
-    betaEvent_intercept  = rep(betaEvent_intercept,  n),
-    betaEvent_binary     = rep(betaEvent_binary,     n),
-    betaEvent_continuous = rep(betaEvent_continuous, n),
-    betaEvent_aux        = rep(betaEvent_aux,        n)
-  )
-  for (m in 1:M)
-    betas[["Event"]][[paste0("betaEvent_assoc", m)]] <- rep(betaEvent_assoc[m], n)
+
+  # Additional clustering factors (only allowed for longitudinal submodel 1)
   if (has_clust) { # expand rows and add on cluster-specific random effects
     betas[["Long1"]] <-
       betas[["Long1"]][rep(row.names(betas[["Long1"]]), Li), , drop = FALSE]
@@ -457,34 +505,22 @@ simjm <- function(n = 200, M = 1,
     betas[["Long1"]][["betaLong_intercept1"]] <-
       betas[["Long1"]][["betaLong_intercept1"]] + u[, 1]
     # add on cluster-specific linear slope
-    if (clust_control$random_trajectory == "linear") {
-      betas[["Long1"]][["betaLong_slope1"]] <-
-        betas[["Long1"]][["betaLong_slope1"]] + u[, 2]
-    }
-    # add on cluster-specific quadratic terms
-    if (clust_control$random_trajectory == "poly") {
-      betas[["Long1"]][["betaLong_poly11"]] <-
-        betas[["Long1"]][["betaLong_poly11"]] + u[, 2]
-      betas[["Long1"]][["betaLong_poly21"]] <-
-        betas[["Long1"]][["betaLong_poly21"]] + u[, 3]
+    if (clust_control$random_trajectory %in% "linear") {
+      betas[["Long1"]][["betaLong_linear1"]] <-
+        betas[["Long1"]][["betaLong_linear1"]] + u[, 2]
     }
   }
 
-  # Determine ultimate shape of the trajectory (used to determine which
-  # parameters to build y_eta from). If there is no lower level clustering
-  # within individuals, then this will just be equal to random_trajectory.
-  # Otherwise, for the first longitudinal submodel it will be set equal to the
-  # value of either random_trajectory[1L] or clust_control$random_trajectory
-  # if one of those isn't set equal to "none".
-  trajectory <- random_trajectory
-  if (has_clust) {
-    sel <- which(!marker1_traj_types == "none")
-    if (!length(sel)) {
-      trajectory[1L] <- "none"
-    } else {
-      trajectory[1L] <- marker1_traj_types[sel]
-    }
-  }
+  # Event submodel parameters
+  betas[["Event"]] <- data.frame(
+    id = 1:n,
+    betaEvent_intercept  = rep(betaEvent_intercept,  n),
+    betaEvent_binary     = rep(betaEvent_binary,     n),
+    betaEvent_continuous = rep(betaEvent_continuous, n),
+    betaEvent_aux        = rep(betaEvent_aux,        n)
+  )
+  for (m in 1:M)
+    betas[["Event"]][[paste0("betaEvent_assoc", m)]] <- rep(betaEvent_assoc[m], n)
 
   #----- Data
 
@@ -499,7 +535,7 @@ simjm <- function(n = 200, M = 1,
 
   # Generate survival times
   ss <- simsurv::simsurv(hazard = jm_hazard, x = covs, betas = betas,
-                         idvar = "id", ids = covs$id, trajectory = trajectory,
+                         idvar = "id", ids = covs$id, trajectory = fixed_trajectory,
                          maxt = max_fuptime, basehaz = basehaz, M = M,
                          assoc = assoc, family = family, interval = interval)
 
@@ -513,7 +549,7 @@ simjm <- function(n = 200, M = 1,
     nm <- paste0("Long", m)
     dat[[nm]] <- merge(betas[[nm]], dat[["Event"]])
     dat[[nm]] <- merge(dat[[nm]], covs)
-    dat[[nm]] <- dat[[nm]][rep(row.names(dat[[nm]]), max_yobs), ]  # multiple row per subject
+    dat[[nm]] <- dat[[nm]][rep(row.names(dat[[nm]]), max_yobs), ] # multiple row per subject
     # create observation times
     if (balanced) { # longitudinal observation times balanced across individuals
       tij_seq  <- max_fuptime * 0:(max_yobs - 1) / max_yobs # baseline and post-baseline
@@ -532,14 +568,23 @@ simjm <- function(n = 200, M = 1,
       dat[[nm]][[paste0("betaLong_intercept", m)]] +
       dat[[nm]][[paste0("betaLong_binary", m)]] * dat[[nm]][["Z1"]] +
       dat[[nm]][[paste0("betaLong_continuous", m)]] * dat[[nm]][["Z2"]]
-    if (random_trajectory[m] %in% c("none", "linear")) {
-      # if no random slope, then still use fixed linear slope
+    if (fixed_trajectory[m] %in% c("linear", "quadratic", "cubic")) {
       dat[[nm]][[paste0("Xij_", m)]] <- dat[[nm]][[paste0("Xij_", m)]] +
-        dat[[nm]][[paste0("betaLong_slope", m)]] * dat[[nm]][["tij"]]
-    } else if (random_trajectory[m] == "poly") {
+        dat[[nm]][[paste0("betaLong_linear", m)]] *
+        dat[[nm]][["tij"]]
+    }
+    if (fixed_trajectory[m] %in% c("quadratic", "cubic")) {
       dat[[nm]][[paste0("Xij_", m)]] <- dat[[nm]][[paste0("Xij_", m)]] +
-        dat[[nm]][[paste0("betaLong_poly1",  m)]] * dat[[nm]][["tij"]] +
-        dat[[nm]][[paste0("betaLong_poly2",  m)]] * dat[[nm]][["tij"]] * dat[[nm]][["tij"]]
+        dat[[nm]][[paste0("betaLong_quadratic", m)]] *
+        dat[[nm]][["tij"]] *
+        dat[[nm]][["tij"]]
+    }
+    if (fixed_trajectory[m] %in% c("cubic")) {
+      dat[[nm]][[paste0("Xij_", m)]] <- dat[[nm]][[paste0("Xij_", m)]] +
+        dat[[nm]][[paste0("betaLong_cubic", m)]] *
+        dat[[nm]][["tij"]] *
+        dat[[nm]][["tij"]] *
+        dat[[nm]][["tij"]]
     }
     fam <- family[[m]]$family
     invlink <- family[[m]]$linkinv
@@ -573,6 +618,13 @@ simjm <- function(n = 200, M = 1,
     rownames(x) <- NULL
     return(x)
   })
+
+  # Only keep individuals who have at least one measurement for each biomarker
+  # (NB Following the issues around delayed entry, this is now all individuals,
+  #     since every individual is forced to have a baseline measurement. This
+  #     may change in the future though, if there is a need to test whether
+  #     rstanarm is correctly accommodating delayed entry, i.e. the situation
+  #     in which we exclude individuals who do not have a baseline measurement.)
   commonids <- ret[[1L]]$id
   for (i in 1:length(ret))
     commonids <- intersect(commonids, ret[[i]]$id)
@@ -585,12 +637,12 @@ simjm <- function(n = 200, M = 1,
     betaLong_continuous,
     betaLong_aux
   )
-  if (any(random_trajectory %in% c("none", "linear")))
-    long_params$betaLong_slope <- betaLong_slope
-  if (any(random_trajectory == "poly")) {
-    long_params$betaLong_poly1 <- betaLong_poly1
-    long_params$betaLong_poly2 <- betaLong_poly2
-  }
+  if (any(fixed_trajectory %in% c("linear", "quadratic", "cubic")))
+    long_params$betaLong_linear <- betaLong_linear
+  if (any(fixed_trajectory %in% c("quadratic", "cubic")))
+    long_params$betaLong_quadratic <- betaLong_quadratic
+  if (any(fixed_trajectory %in% c("cubic")))
+    long_params$betaLong_cubic <- betaLong_cubic
   event_params <- nlist(
     betaEvent_intercept,
     betaEvent_binary,
@@ -604,12 +656,19 @@ simjm <- function(n = 200, M = 1,
   )
 
   # Return object
-  structure(ret, params = c(long_params, event_params, re_params),
-            n = length(unique(ret$Event$id)), M = M,
-            max_yobs = max_yobs, max_fuptime = max_fuptime,
-            balanced = balanced, assoc = assoc,
-            family = family, random_trajectory = random_trajectory,
-            clust_control = clust_control, seed = seed)
+  structure(ret,
+            params = c(long_params, event_params, re_params),
+            n = length(unique(ret$Event$id)),
+            M = M,
+            max_yobs = max_yobs,
+            max_fuptime = max_fuptime,
+            balanced = balanced,
+            assoc = assoc,
+            family = family,
+            fixed_trajectory = fixed_trajectory,
+            random_trajectory = random_trajectory,
+            clust_control = clust_control,
+            seed = seed)
 }
 
 
@@ -655,14 +714,17 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
       betas[[nm]][[paste0("betaLong_intercept", m)]] +
       betas[[nm]][[paste0("betaLong_binary", m)]] * x[["Z1"]] +
       betas[[nm]][[paste0("betaLong_continuous", m)]] * x[["Z2"]]
-    if (trajectory[m] %in% c("none", "linear")) {
-      # if no random slope, then still use fixed linear slope
+    if (trajectory[m] %in% c("linear", "quadratic", "cubic")) {
       etavalue_m <- etavalue_m +
-        betas[[nm]][[paste0("betaLong_slope", m)]] * t
-    } else if (trajectory[m] == "poly") {
+        betas[[nm]][[paste0("betaLong_linear", m)]] * t
+    }
+    if (trajectory[m] %in% c("quadratic", "cubic")) {
       etavalue_m <- etavalue_m +
-        betas[[nm]][[paste0("betaLong_poly1",  m)]] * t +
-        betas[[nm]][[paste0("betaLong_poly2",  m)]] * (t * t)
+        betas[[nm]][[paste0("betaLong_quadratic", m)]] * (t * t)
+    }
+    if (trajectory[m] %in% c("cubic")) {
+      etavalue_m <- etavalue_m +
+        betas[[nm]][[paste0("betaLong_cubic", m)]] * (t * t * t)
     }
     if (!is.null(grp_assoc)) {
       if (grp_assoc == "sum") {
@@ -678,14 +740,20 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
         betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etavalue_m
     } else if (assoc[m] == "etaslope") {
       # eta slope
-      if (trajectory[m] %in% c("none", "linear")) {
-        # if no random slope, then still use fixed linear slope
+      if (trajectory[m] == "none") {
+        etaslope_m <- 0
+      } else if (trajectory[m] == "linear") {
         etaslope_m <-
-          betas[[nm]][[paste0("betaLong_slope", m)]]
-      } else if (trajectory[m] == "poly") {
+          betas[[nm]][[paste0("betaLong_linear", m)]]
+      } else if (trajectory[m] == "quadratic") {
         etaslope_m <-
-          betas[[nm]][[paste0("betaLong_poly1",  m)]] +
-          betas[[nm]][[paste0("betaLong_poly2",  m)]] * (2 * t)
+          betas[[nm]][[paste0("betaLong_linear",  m)]] +
+          betas[[nm]][[paste0("betaLong_quadratic",  m)]] * 2 * t
+      } else if (trajectory[m] == "cubic") {
+        etaslope_m <-
+          betas[[nm]][[paste0("betaLong_linear",  m)]] +
+          betas[[nm]][[paste0("betaLong_quadratic",  m)]] * 2 * t +
+          betas[[nm]][[paste0("betaLong_cubic",  m)]] * 3 * I(t ^ 2)
       }
       if (!is.null(grp_assoc)) {
         if (grp_assoc == "sum") {
@@ -698,13 +766,24 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
         betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etaslope_m
     } else if (assoc[m] == "etaauc") {
       # eta auc
-      if (trajectory[m] %in% c("none", "linear")) {
+      if (trajectory[m] == "none") {
+        etaauc_m <-
+          etabaseline_m * t
+      } else if (trajectory[m] == "linear") {
         etaauc_m <-
           etabaseline_m * t +
-          0.5 * (etavalue_m - etabaseline_m) * t
-      } else if (trajectory[m] == "poly") {
-        stop("Calculation of hazard function for 'etaauc' with polynomial ",
-             "trajectory not yet implemented.", call. = FALSE)
+          (1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2)
+      } else if (trajectory[m] == "quadratic") {
+        etaauc_m <-
+          etabaseline_m * t +
+          (1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2) +
+          (1/3) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 3)
+      } else if (trajectory[m] == "cubic") {
+        etaauc_m <-
+          etabaseline_m * t +
+          (1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2) +
+          (1/3) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 3) +
+          (1/4) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 4)
       }
       if (!is.null(grp_assoc))
         stop("'etaauc' association structure cannot currently be used ",
