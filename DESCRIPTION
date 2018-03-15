@@ -1,15 +1,25 @@
 Package: simjm
 Type: Package
 Title: Simulate Joint Longitudinal and Survival Data
-Version: 0.0.0-9000
+Version: 0.0.1-9000
 Authors@R: c(person("Sam", "Brilleman", email = "sam.brilleman@monash.edu", 
              role = c("cre", "aut", "cph")),
              person("Trustees of", "Columbia University", role = "cph",
-             comment = c("R/rstanarm-misc.R")))
+             comment = c("R/misc.R")))
 Maintainer: Sam Brilleman <sam.brilleman@monash.edu>
 Description: Simulates data from a joint longitudinal and survival model. The 
-    model can be a univariate (one longitudinal marker) or a multivariate (more
-    than one longitudinal marker) joint model.
+    model can be a univariate (one longitudinal outcome) or a multivariate (more
+    than one longitudinal outcome) shared parameter joint model. Each longitudinal 
+    outcome is assumed to be modelled using a generalised linear mixed model
+    (for which a variety of family and link functions are allowed), and where 
+    changes over time can be modelled using either linear, quadratic or cubic 
+    effects of time. Population-level (i.e. fixed effects) and/or 
+    individual-specific parameters (i.e. random effects) can be specified for 
+    each of the time effects). A Weibull distribution is assumed for the 
+    baseline hazard in the event submodel. A variety of association structures
+    are possible for linking the longitudinal and survival submodels. Baseline
+    covariates (one binary and one continuous) are included in each longitudinal
+    submodel and in the event submodel.
 License: GPL (>=3) | file LICENSE
 Depends:
     R (>= 3.3.0),
