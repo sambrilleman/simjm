@@ -5,7 +5,7 @@
 \title{Plot method for simjm simulated data frames}
 \usage{
 \method{plot}{simjm}(x, type = c("all", "trajectory", "basehaz", "hazard"),
-  m = NULL)
+  m = 1)
 }
 \arguments{
 \item{x}{An object of class \code{"simjm"}, which is a list of

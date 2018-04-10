@@ -1,0 +1,221 @@
+---
+title: "How to use the simjm package"
+author: "Sam Brilleman"
+date: "`r Sys.Date()`"
+output: 
+  html_vignette:
+    toc: yes
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{How to use the simjm package}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.width = 7.5, 
+                      fig.height = 5)
+
+# Load packages
+library(simjm)
+library(ggplot2)
+
+# Set plot theme
+ggplot2::theme_set(ggplot2::theme_bw())
+```
+
+## Preamble
+
+The **simjm** package simulates longitudinal and survival data under a shared parameter joint model. The package primarily consists of one function for simulating the data: `simjm`. (The only other functions provided in the package are convenience functions for producing plots related to the data generating model or plotting the simulated data).
+
+The first section of this vignette describes the data generating model used by **simjm** (i.e. the technical details), and the arguments that control each aspect of the data generating model. The second section of the vignette includes some examples of using the package.
+
+## Technical details
+
+### Data generating model
+
+A shared parameter joint model consists of related submodels which are specified separately for each of the longitudinal and survival outcomes. These are therefore commonly referred to as the *longitudinal submodel(s)* and the *event submodel*. The longitudinal and event submodels are linked using shared individual-specific parameters, which can be parameterised in a number of ways. We describe the formulation of the model used by **simjm** below.
+
+#### Longitudinal submodel(s)
+
+We assume $y_{im}(t)$ corresponds to the value of the $m^{th}$ $(m = 1,...,M)$ biomarker for individual $i$ $(i = 1,...,N)$ evaluated at time $t$. We specify a (multivariate) generalised linear mixed model that assumes $y_{im}(t)$ follows a distribution in the exponential family with mean $\mu_{im}(t)$ and linear predictor
+
+$$
+\begin{aligned}
+\eta_{im}(t) = g_m(\mu_{im}(t)) = 
+  \beta_{0m} +
+  \beta_{1m} z_{1i} +
+  \beta_{2m} z_{2i} +
+& \beta_{3m} t +
+  \beta_{4m} t^2 +
+  \beta_{5m} t^3 + \\
+& b_{0im} +
+  b_{1im} t   +  
+  b_{2im} t^2 +  
+  b_{3im} t^3
+\end{aligned}
+$$
+
+where $g_m(.)$ is a known link function, $z_{1i}$ is a binary baseline covariate for individual $i$, $z_{2i}$ is a continuous baseline covariate for individual $i$, and the remaining terms correspond to an individual-specific cubic longitudinal trajectory for individual $i$. The user can choose between a linear, quadratic or cubic longitudinal trajectory, with or without random effect parameters for each term; this is controlled via the `fixed_trajectory` and `random_trajectory` arguments. The following parameter constraints apply:
+
+- specifying `fixed_trajectory = "none"` enforces $\beta_{3m} = \beta_{4m} = \beta_{5m} = 0$
+- specifying `fixed_trajectory = "linear"` enforces $\beta_{4m} = \beta_{5m} = 0$
+- specifying `fixed_trajectory = "quadratic"` enforces $\beta_{5m} = 0$
+- specifying `fixed_trajectory = "cubic"` doesn't enforce any zero constraint on the $\beta$ parameters
+
+Similarly, for the random effect parameters that contribute to the longitudinal trajectory:
+
+- specifying `random_trajectory = "none"` enforces $b_{1im} = b_{2im} = b_{3im} = 0$
+- specifying `random_trajectory = "linear"` enforces $b_{2im} = b_{3im} = 0$
+- specifying `random_trajectory = "quadratic"` enforces $b_{3im} = 0$
+- specifying `random_trajectory = "cubic"` doesn't enforce any zero constraint on the $b$ parameters
+
+The default is `fixed_trajectory = "cubic"` and `random_trajectory = "linear"`, i.e. a cubic fixed effect trajectory with an individual-specific (random effect) intercept and linear slope term. One can specify a different type of longitudinal trajectory for each biomarker in a multivariate joint model by providing a character vector for the `fixed_trajectory` and/or `random_trajectory` arguments; see the help file for `simjm`.
+
+The random effect parameters are assumed to be correlated and drawn from a multivariate normal distribution. That is, we can define $\boldsymbol{b}_{im} = (b_{0im}, b_{1im}, b_{2im}, b_{3im})$ as the vector of individual-specific parameters for the $m^{th}$ biomarker, and then we assume
+
+$$
+\begin{pmatrix} \boldsymbol{b}_{i1} \\ \vdots \\ \boldsymbol{b}_{iM} \end{pmatrix} = 
+  \boldsymbol{b}_i \sim
+  \mathsf{Normal} \left( 0 , \boldsymbol{\Sigma} \right)
+$$
+
+where $\boldsymbol{\Sigma}$ is an unstructured variance-covariance matrix. We can decompose $\boldsymbol{\Sigma}$ into a correlation matrix and vector of standard deviations for each of the random effects. The variance-covariance matrix $\boldsymbol{\Sigma}$ can be decomposed as $\boldsymbol{\Sigma} = \mathbf{VRV}$ where $\mathbf{R}$ is the correlation matrix for the individual-specific parameters and $\mathbf{V} = \text{diag}(\boldsymbol{\sigma}_b)$ is a square diagonal matrix with the diagonal elements being the values from a vector of standard deviations for the individual-specific parameters, $\boldsymbol{\sigma}_b$. The elements of the correlation matrix $\mathbf{R}$, and the standard deviations of the random effects $\boldsymbol{\sigma}_b$, used in the data generating model, are controlled by the user via the `b_rho` and `b_sd` arguments.
+
+The user can control the true values of the $\beta_{\cdot m}$ parameters used in the data generating model, via the various `betaLong_*` arguments. In addition they can specify the distributions for the binary and continuous baseline covariates, $z_{1i}$ and $z_{2i}$, via the `prob_Z1`, `mean_Z2`, and `sd_Z2` arguments. The choice of family for each biomarker can be specified via the `family` argument (the link function $g_m(.)$ is taken to be the canonical link for the specified family, as defined by the `family` function from the **stats** package). The true value for any auxliary parameter for the family, for example the residual standard deviation for Gaussian biomarker data, are specified via the `betaLong_aux` argument. 
+
+#### Event submodel
+
+A survival time for individual $i$, denoted $T^*_i$, is simulated by assuming that the hazard of the event is defined as:
+
+$$
+h_i(t) = h_0(t; \boldsymbol{\gamma}) \space \text{exp} 
+  \left(
+    \beta_0 +
+    \beta_1 z_{1i} +
+    \beta_2 z_{2i} +
+    \sum_{m=1}^M
+      f_{m}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) 
+  \right) 
+$$
+
+
+where $h_i(t)$ is the hazard of the event for individual $i$ at time $t$, $h_0(t; \boldsymbol{\gamma})$ is the baseline hazard at time $t$ given parameters $\boldsymbol{\gamma}$, $z_{1i}$ and $z_{2i}$ are the same baseline covariates used in the longitudinal submodel(s), the $\beta_{\cdot}$ parameters are the true log hazard ratios used in the data generating model, and $\boldsymbol{\beta_m} = (\beta_{0m}, \beta_{1m}, \dots, \beta_{5m})$ is the collection of fixed effect parameters from the longitudinal submodel for the $m^{th}$ biomarker. 
+
+The $f_m(.)$ $(m = 1,\dots,M)$ are a set of known functions, parameterised by the association parameters $\alpha_{m}$ $(m = 1,\dots,M)$, and used to form the association structure for the joint model. Only one type of association structure can link each biomarker to the hazard of the event. The form for $f_{m}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t)$ can be any of the following:
+
+$$ f_{mq}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) = \alpha_{m} \eta_{im}(t) $$
+$$ f_{m}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) = \alpha_{m} \frac{d\eta_{im}(t)}{dt} $$
+$$ f_{mq}(\boldsymbol{\beta}, \boldsymbol{b}_{im}, \alpha_{mq}; t) = \alpha_{mq} \int_0^t \eta_{im}(u) du $$
+$$ f_{mq}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) = \alpha_{m} \mu_{im}(t) $$  
+$$ f_{mq}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) = \alpha_{m} b_{0im} $$
+
+$$ f_{mq}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) = \alpha_{m} (\beta_{0m} + b_{0im}) $$
+$$ f_{mq}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) = \alpha_{m} b_{1im} $$
+$$ f_{mq}(\boldsymbol{\beta_m}, \boldsymbol{b}_{im}, \alpha_{m}; t) = \alpha_{m} (\beta_{1m} + b_{3im}) $$
+
+The first three forms correspond to the so-called *current value*, *current slope*, and *cumulative effects* association structures for joint models. When simulating event times under either the current slope or cumulative effects association structure these values are calculated analytically, since a closed form solution is easily obtainable for linear, quadratic, and cubic longitudinal trajectories. The fourth form corresponds to the *current expected value* of the biomarker, rather than the current value of the linear predictor (note that those are equivalent for a Gaussian family biomarker). The fifth and sixth forms correspond to a time-fixed association structure based on the random intercept for individual $i$, either with or without the fixed effect contribution. Whilst the last two forms correspond to a time-fixed association structure based on the random linear slope term for individual $i$, either with or without the fixed effect contribution. The choice of association structure for the data generating model is specified by the user via the `assoc` argument. If event times are being simulated under a multivariate joint model, then user may choose to use a different association structure for linking each biomarker to the event; this is achieved by specifying a vector of association structure types in the `assoc` argument.
+
+The choice of baseline hazard is specified via the `basehaz` argument, but currently the only available option is a Weibull baseline hazard, parameterised as
+
+$$
+h_0(t; \boldsymbol{\gamma}) = \gamma t ^ {\gamma - 1}
+$$
+
+where $\gamma$ is the shape parameter (and the scale parameter is absorbed into the intercept term in the linear predictor, i.e. $\beta_0$). The true value for the shape parameter $\gamma$ is specified via the `betaEvent_aux` argument.
+
+The observed event time for individual $i$ (variable `eventtime` in the data frame returned by the `simjm` function) is defined as $T_i = \text{min} (T^*_i, C_i)$ where $C_i$ is the administrative censoring time specified via the `max_fuptime`. Currently, the censoring time must be common across all individuals (this assumption may be relaxed in a future release).
+
+### Method for simulating the event times
+
+The event times are simulated from the specified hazard function using the method of Crowther and Lambert (2013), as implemented in the **simsurv** (Brilleman, 2018) R package. For technical details on the method used to simulate the event times we refer the reader to either the Crowther and Lambert article or the vignette for the **simsurv** package available at https://cran.r-project.org/package=simsurv. 
+
+## Usage examples
+
+### Examining the underlying longitudinal trajectory and hazard function
+
+It is of interest to us to visualise the underlying trajectory and hazard function associated with our data generating model. We can do this using the `plot.simjm` method. This is a generic plot method that can be applied to the list of data frames returned by a call to `simjm`, since those returned data frames has a special class attribute. Let us plot the longitudinal trajectory and hazard function for data simulated using the default `simjm` values. First we will simulate the longitudinal and survival data:
+
+```{r plot_simjm_28123}
+dat <- simjm()
+```
+
+And here is a plot of the underlying longitudinal trajectory for the data generating model, obtained by setting the fixed effect covariates equal to their mean values and setting the individual-specific parameters equal to zero:
+
+```{r plot_simjm_32813}
+plot(dat, type = "trajectory", m = 1)
+```
+
+And here is a plot of the baseline hazard function obtained by setting the fixed effect covariates equal to their mean values and the value/slope/integral of the biomarker (i.e. the contribution from the association structure) set equal to zero:
+
+```{r plot_simjm_33423}
+plot(dat, type = "basehaz")
+```
+
+And here is the hazard function when the fixed effect covariates are equal to their mean values, the individual-specific parameters are set equal to zero, and the the value/slope/integral of the biomarker (i.e. the contribution from the association structure) at time $t$ is set equal to its current value based on the mean longitudinal trajectory:
+
+```{r plot_simjm_978931}
+plot(dat, type = "hazard")
+```
+
+We can also plot all of these bits of information in a combined plot (which is actually the default behaviour for `plot.simjm`):
+
+```{r plot_simjm_87871}
+plot(dat)
+```
+
+We will use this plotting method to examine the data generating model in the following examples.
+
+### Simulating from a univariate joint model
+
+It is easy to simulate data under a shared parameter joint model with a current value association structure using the simjm default values.
+
+```{r}
+dat <- simjm()
+```
+
+And here are the first few rows of the resulting data frames
+
+```{r}
+head(dat$Long1)
+head(dat$Event)
+```
+
+The default behaviour is to simulate under a cubic trajectory with a random intercept and random linear slope term. Here is the average individual-specific trajectory under the data generating model:
+
+```{r}
+plot(dat, type = "trajectory")
+```
+
+If we instead wanted to simulate under a linear trajectory, then we can specify `fixed_trajectory = "linear"`. Let us do that, and this time we will specify a positive linear slope instead of the default which is a negative slope. For example:
+
+```{r}
+dat <- simjm(fixed_trajectory = "linear", betaLong_linear = 0.5)
+plot(dat, type = "trajectory")
+```
+
+### Simulating from a multivariate joint model
+
+We can simulate under a multivariate joint model where we assume that the hazard is related to the current value of the first longitudinal biomarker, and the current slope of the second longitudinal biomarker. We will assume a quadratic trajectory for the first biomarker, and a cubic trajectory for the second biomarker (but each with just a random intercept and random linear slope term). We will make the first marker increase over time (on average) and make the second biomarker descrease over time (on average). We will specify an administrative censoring time of, say, 10 years. We will limit the maximum number of longitudinal measurements for each biomarker to be 8 for each individual.
+
+```{r}
+dat <- simjm(M = 2,
+             fixed_trajectory = c("quadratic", "cubic"),
+             betaLong_linear = c(0.5, -0.2),
+             assoc = c("etavalue", "etaslope"),
+             max_fuptime = 10,
+             max_yobs = 8)
+```
+
+Let's examine the average longitudinal trajectories and hazard function for this data generating model:
+
+```{r}
+plot(dat)
+```
+
+## References
+
+Brilleman SL. (2018) simsurv: Simulate Survival Data. R package version 0.2.0. https://cran.r-project.org/package=simsurv
+
+Crowther MJ, Lambert PC. Simulating biologically plausible complex survival data. *Stat Med* 2013;**32**(23):4118-4134. DOI: 10.1002/sim.5823
+

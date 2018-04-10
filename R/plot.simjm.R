@@ -41,7 +41,7 @@ plot.simjm <- function(x,
                                 "trajectory",
                                 "basehaz",
                                 "hazard"),
-                       m = NULL) {
+                       m = 1) {
 
   type <- match.arg(type)
 
@@ -99,8 +99,8 @@ plot.simjm <- function(x,
   }
 
   gg <-
-    ggplot2::ggplot(data.frame(t = c(0, max_fuptime)), aes(t)) +
-    ggplot2::theme_set(theme_bw()) +
+    ggplot2::ggplot(data.frame(t = c(0, max_fuptime)), ggplot2::aes(t)) +
+    ggplot2::theme_set(ggplot2::theme_bw()) +
     ggplot2::xlab("Time")
 
   gg_eta_y <- lapply(1:M, function(m) {

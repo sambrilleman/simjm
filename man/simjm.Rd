@@ -50,7 +50,8 @@ the quadratic and cubic random terms in the model.}
 specifying the desired type of association structure for
 linking each longitudinal outcome to the hazard of the event.
 Only one association structure type can be specified for each longitudinal
-outcome. The options are: \code{"etavalue"}, \code{"etaslope"},
+outcome. The options are: \code{"null"}, \code{"etavalue"},
+\code{"etaslope"}, \code{"etaauc"}, \code{"muvalue"},
 \code{"shared_b(1)"}, \code{"shared_coef(1)"}, \code{"shared_b(2)"},
 \code{"shared_coef(2)"}.}
 
@@ -195,9 +196,10 @@ values of the biomarker at the measurement times).}
 \value{
 A list of data frames, one for each longitudinal biomarker (in long
   format) and one for the event time data. The returned object also has a
-  number of attributes that record the values specified for the arguments in
-  the \code{simjm} call (for example the "true" parameter values, the number
-  of individuals, the number of longitudinal markers, and so on).
+  number of attributes, including a class attribute \code{simjm} and
+  a number of other attributes that record the arguments that were specified in
+  the \code{simjm} call; for example the "true" parameter values, the number
+  of individuals, the number of longitudinal markers, and so on.
 }
 \description{
 Returns a list of data frames containing data simulated from a joint model for
