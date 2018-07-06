@@ -5,7 +5,7 @@ output: github_document
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ```{r, echo = FALSE}
-library(dplyr)
+suppressMessages(library(dplyr))
 library(simjm)
 set.seed(12344321)
 knitr::opts_chunk$set(
