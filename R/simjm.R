@@ -303,6 +303,10 @@ simjm <- function(n = 200, M = 1,
     stop("'fixed_trajectory' must be one of: ", paste(ok_trajs, collapse = ", "))
   if (!all(random_trajectory %in% ok_trajs))
     stop("'random_trajectory' must be one of: ", paste(ok_trajs, collapse = ", "))
+  if (!length(fixed_trajectory) == M)
+    stop("'fixed_trajectory' is the wrong length.")
+  if (!length(random_trajectory) == M)
+    stop("'random_trajectory' is the wrong length.")
 
   # Check family is valid
   if (!is(family, "list"))
@@ -349,13 +353,14 @@ simjm <- function(n = 200, M = 1,
       stop("In clust_control, 'L' should be a positive integer.")
     if (!is.numeric(clust_control$u_sd) || any(clust_control$u_sd < 0))
       stop("In clust_control, 'u_sd' must be a positive scalar.")
-    ok_clust_assocs <- c("sum", "mean")
+    ok_clust_assocs <- c("sum", "mean", "max", "min")
     if (!clust_control$assoc %in% ok_clust_assocs)
       stop("In clust_control, 'assoc' must be one of: ",
            paste(ok_clust_assocs, collapse = ", "))
     ok_clust_trajs  <- c("none", "linear")
     if (!(clust_control$random_trajectory %in% ok_clust_trajs))
-      stop("'clust_control$random_trajectory' must be one of: ", paste(ok_clust_trajs, collapse = ", "))
+      stop("'clust_control$random_trajectory' must be one of: ",
+           paste(ok_clust_trajs, collapse = ", "))
     marker1_traj_types <- c(random_trajectory[1L], clust_control$random_trajectory)
     if (!any(marker1_traj_types == "none")) {
       stop("If lower-level clustering within the individual is specified, ",
@@ -363,6 +368,9 @@ simjm <- function(n = 200, M = 1,
            "(ie. 'random_trajectory = none') at either the individual-level ",
            "or the clustering-level within individuals.")
     }
+    grp_assoc <- clust_control$assoc
+  } else {
+    grp_assoc <- NULL
   }
 
   #----- Parameters
@@ -543,10 +551,13 @@ simjm <- function(n = 200, M = 1,
   covs <- data.frame(id = 1:n, Z1, Z2)
 
   # Generate survival times
-  ss <- simsurv::simsurv(hazard = jm_hazard, x = covs, betas = betas,
-                         idvar = "id", ids = covs$id, trajectory = fixed_trajectory,
-                         maxt = max_fuptime, basehaz = basehaz, M = M,
-                         assoc = assoc, family = family, interval = interval)
+  ss <- simsurv::simsurv(# the following arguments apply to 'simsurv'
+                         hazard = jm_hazard, x = covs, betas = betas,
+                         idvar = "id", ids = covs$id,
+                         maxt = max_fuptime, interval = interval,
+                         # the following arguments apply to 'jm_hazard'
+                         basehaz = basehaz, M = M, trajectory = fixed_trajectory,
+                         assoc = assoc, family = family, grp_assoc = grp_assoc)
 
   # Construct data frame of event data
   dat <- list(
@@ -744,6 +755,7 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
       etavalue_m <- etavalue_m +
         betas[[nm]][[paste0("betaLong_cubic", m)]] * (t * t * t)
     }
+
     if (!is.null(grp_assoc)) {
       if (grp_assoc == "sum") {
         res_etavalue_m <- sum(etavalue_m)
@@ -754,6 +766,7 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
 
     if (assoc[m] == "etavalue") {
       # eta value
+      res_etavalue_m <- collapse_across_clusters(etavalue_m, grp_assoc)
       etaevent <- etaevent +
         betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etavalue_m
     } else if (assoc[m] == "etaslope") {
@@ -773,13 +786,7 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
           betas[[nm]][[paste0("betaLong_quadratic",  m)]] * 2 * t +
           betas[[nm]][[paste0("betaLong_cubic",  m)]] * 3 * I(t ^ 2)
       }
-      if (!is.null(grp_assoc)) {
-        if (grp_assoc == "sum") {
-          res_etaslope_m <- sum(etaslope_m)
-        } else if (grp_assoc == "mean") {
-          res_etaslope_m <- mean(etaslope_m)
-        }
-      } else res_etaslope_m <- etaslope_m
+      res_etaslope_m <- collapse_across_clusters(etaslope_m, grp_assoc)
       etaevent <- etaevent +
         betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etaslope_m
     } else if (assoc[m] == "etaauc") {
@@ -790,41 +797,59 @@ jm_hazard <- function(t, x, betas, basehaz = "weibull", M = 1,
       } else if (trajectory[m] == "linear") {
         etaauc_m <-
           etabaseline_m * t +
-          (1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2)
+          I(1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2)
       } else if (trajectory[m] == "quadratic") {
         etaauc_m <-
           etabaseline_m * t +
-          (1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2) +
-          (1/3) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 3)
+          I(1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2) +
+          I(1/3) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 3)
       } else if (trajectory[m] == "cubic") {
         etaauc_m <-
           etabaseline_m * t +
-          (1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2) +
-          (1/3) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 3) +
-          (1/4) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 4)
+          I(1/2) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 2) +
+          I(1/3) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 3) +
+          I(1/4) * betas[[nm]][[paste0("betaLong_linear", m)]] * I(t ^ 4)
       }
-      if (!is.null(grp_assoc))
-        stop("'etaauc' association structure cannot currently be used ",
-             "when there is lower level clustering within individuals.")
+      res_etaauc_m <- collapse_across_clusters(etaauc_m, grp_assoc)
       etaevent <- etaevent +
-        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * etaauc_m
+        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_etaauc_m
     } else if (assoc[m] == "muvalue") {
       # mu value
       invlink <- family[[m]]$invlink
       muvalue_m <- invlink(etavalue_m)
-      if (!is.null(grp_assoc)) {
-        if (grp_assoc == "sum") {
-          res_muvalue_m <- sum(muvalue_m)
-        } else if (grp_assoc == "mean") {
-          res_muvalue_m <- mean(muvalue_m)
-        }
-      } else res_muvalue_m <- muvalue_m
+      res_muvalue_m <- collapse_across_clusters(muvalue_m, grp_assoc)
       etaevent <- etaevent +
-        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * muvalue_m
+        betas[["Event"]][[paste0("betaEvent_assoc", m)]] * res_muvalue_m
     }
 
   }
-  # Calculate and return hazard
+
+  # Calculate hazard
   h <- h0 * exp(etaevent)
+
+  # Validate and return hazard
+  if (!length(h) == 1) {
+    stop("Bug found: returned hazard should be a scalar.")
+  }
   return(h)
+}
+
+# Apply summary function in association structure when there is lower-level
+# clustering within patients
+#
+# @param x A scalar or numeric vector with the 'etavalue', 'etaslope', 'etaauc'
+#   value (or whatever quantity is being used in the association structure) for
+#   one patient.
+# @param collapse_fun A function to match and then apply to 'x'. If NULL, then
+#   'x' is just returned, in which case 'x' should just be a scalar (i.e. there
+#   should only be a patient-level value in the association structure and no
+#   lower-level clusters within a patient).
+# @return A scalar, used as the association term in the event submodel.
+collapse_across_clusters <- function(x, collapse_fun = NULL) {
+  if (is.null(collapse_fun)) {
+    return(x)
+  } else {
+    fn <- match.fun(collapse_fun)
+    return(fn(x))
+  }
 }

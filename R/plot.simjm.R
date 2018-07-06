@@ -82,17 +82,40 @@ plot.simjm <- function(x,
       params$betaEvent_continuous * params$mean_Z2)
     for (m in 1:M) {
       if (assoc[m] == "etavalue") {
-        eta_y <-
+        etavalue <-
           params$betaLong_intercept[m] +
           params$betaLong_binary[m]     * params$prob_Z1 +
           params$betaLong_continuous[m] * params$mean_Z2
         if (fixed_trajectory[m] %in% c("linear", "quadratic", "cubic"))
-          eta_y <- eta_y + params$betaLong_linear[m] * (t^1)
+          etavalue <- etavalue + params$betaLong_linear[m] * (t^1)
         if (fixed_trajectory[m] %in% c("quadratic", "cubic"))
-          eta_y <- eta_y + params$betaLong_quadratic[m] * (t^2)
+          etavalue <- etavalue + params$betaLong_quadratic[m] * (t^2)
         if (fixed_trajectory[m] %in% c("cubic"))
-          eta_y <- eta_y + params$betaLong_cubic[m] * (t^3)
-        haz <- haz * exp(params$betaEvent_assoc[m] * eta_y)
+          etavalue <- etavalue + params$betaLong_cubic[m] * (t^3)
+        haz <- haz * exp(params$betaEvent_assoc[m] * etavalue)
+      } else if (assoc[m] == "etaslope") {
+        etaslope <- 0
+        if (fixed_trajectory[m] %in% c("linear", "quadratic", "cubic"))
+          etaslope <- etaslope + params$betaLong_linear[m]
+        if (fixed_trajectory[m] %in% c("quadratic", "cubic"))
+          etaslope <- etaslope + 2 * params$betaLong_quadratic[m] * t
+        if (fixed_trajectory[m] %in% c("cubic"))
+          etaslope <- etaslope + 3 * params$betaLong_cubic[m] * (t^2)
+        haz <- haz * exp(params$betaEvent_assoc[m] * etaslope)
+      } else if (assoc[m] == "etaauc") {
+        etaauc <-
+          params$betaLong_intercept[m] * t +
+          params$betaLong_binary[m]     * params$prob_Z1 * t +
+          params$betaLong_continuous[m] * params$mean_Z2 * t
+        if (fixed_trajectory[m] %in% c("linear", "quadratic", "cubic"))
+          etaauc <- etaauc + (1/2) * params$betaLong_linear[m] * (t^2)
+        if (fixed_trajectory[m] %in% c("quadratic", "cubic"))
+          etaauc <- etaauc + (1/3) * params$betaLong_quadratic[m] * (t^3)
+        if (fixed_trajectory[m] %in% c("cubic"))
+          etaauc <- etaauc + (1/4) * params$betaLong_cubic[m] * (t^4)
+        haz <- haz * exp(params$betaEvent_assoc[m] * etaauc)
+      } else {
+        stop("Plot method not yet implemented for assoc ", assoc[m])
       }
     }
     haz
