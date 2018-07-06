@@ -23,7 +23,7 @@ simjm(n = 200, M = 1, fixed_trajectory = "cubic",
 
 \item{fixed_trajectory}{The desired type of trajectory in the fixed effects
 part of the longitudinal model. Can be \code{"none"} (intercept only),
-\code{"linear"} (the default, intercept and linear slope),
+\code{"linear"} (intercept and linear slope),
 \code{"quadratic"} (intercept, linear slope, and quadratic term),
 or \code{"cubic"} (intercept, linear slope, quadratic term, and
 cubic term). Can be a single character string, or a character
@@ -34,7 +34,7 @@ always included in the longitudinal submodel as well.}
 
 \item{random_trajectory}{The desired type of trajectory in the random effects
 part of the longitudinal model. Can be \code{"none"} (random intercept only),
-\code{"linear"} (the default, random intercept and linear slope),
+\code{"linear"} (random intercept and linear slope),
 \code{"quadratic"} (random intercept, linear slope, and quadratic term),
 or \code{"cubic"} (random intercept, linear slope, quadratic term, and
 cubic term). Can be a single character string, or a character

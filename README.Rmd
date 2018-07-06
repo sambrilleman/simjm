@@ -5,6 +5,7 @@ output: github_document
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ```{r, echo = FALSE}
+library(dplyr)
 library(simjm)
 set.seed(12344321)
 knitr::opts_chunk$set(
@@ -21,9 +22,9 @@ knitr::opts_chunk$set(
 
 **simjm** is an R package that allows the user to simulate data from a shared parameter joint model for longitudinal and time-to-event data. 
 
-The shared parameter joint model from which the simulated data is generated is based on the model formulation described for the `stan_jm` modelling function in the **rstanarm** R package. The shared parameter joint model can be univariate (one longitudinal marker) or multivariate (more than one longitudinal marker).
+The shared parameter joint model from which the simulated data is generated is based on the model formulation described for the `stan_jm` modelling function in the **rstanarm** R package. See [this](https://cran.r-project.org/web/packages/rstanarm/vignettes/jm.html) vignette for some of the details. The shared parameter joint model can be univariate (one longitudinal marker) or multivariate (more than one longitudinal marker).
 
-For the longitudinal submodel a generalised linear mixed model is assumed with any of the family choices allowed by `stats::glm`. If a multivariate joint model is specified, then the longitudinal submodel consists of a multivariate generalized linear model (GLM) with group-specific terms (at the individual-level) that are assumed to be correlated across the different GLM submodels. It is possible to specify a different outcome type (for example a different family and/or link function) for each of the GLM submodels, by providing a list of family objects in the family argument to the `simjm` call. Auxiliary parameters for each of the families can be specified via the `betaLong_aux` arugment to the `simjm` call. For each longitudinal marker submodel, the subject-specific longitudinal trajectory (on the linear predictor scale) can be specified as linear (`random_trajectory = "linear"`), quadratic (`random_trajectory = "poly"`) or none (`random_trajectory = "none"`); if the latter is used then a fixed-effect linear slope is still included but only an individual-level random intercept (i.e. no random slope).  
+For the longitudinal submodel a generalised linear mixed model is assumed with any of the family choices allowed by `stats::glm`. If a multivariate joint model is specified, then the longitudinal submodel consists of a multivariate generalized linear model (GLM) with group-specific terms (at the individual-level) that are assumed to be correlated across the different GLM submodels. It is possible to specify a different outcome type (for example a different family and/or link function) for each of the GLM submodels, by providing a list of family objects in the family argument to the `simjm` call. Auxiliary parameters for each of the families can be specified via the `betaLong_aux` arugment to the `simjm` call. For each longitudinal marker submodel, the population-level longitudinal trajectory is determined via the `fixed_trajectory` argument. This can be specified as either `"none"` (intercept only), `"linear"` (intercept and linear slope), `"quadratic"` (intercept, linear slope, and quadratic term), or `"cubic"` (the default, intercept, linear slope, quadratic term, and cubic term). In addition, the subject-specific deviations from this trajectory (i.e. subject-specific parameters, also known as subject-level random effects) are determined via the `random_trajectory` argument (specified in a similar manner to the `fixed_trajectory` argument).  
 
 Simulated event times are generated via a call to the **simsurv** package, which uses the approach described in Crowther and Lambert (2013) whereby the cumulative hazard is evaluated using numerical quadrature and survival times are generated using an iterative algorithm which nests the quadrature-based evaluation of the cumulative hazard inside Brent's (1973) univariate root finder. A variety of association structures can be specified for the joint model, however, the user is currently only allowed to choose one type of association structure for a given simulated dataset (i.e. only one association structure can be specified, but there are a variety of choices). Currently the only baseline hazard available for the event submodel is a Weibull distribution, but the "true" shape parameter can be specified by the user via the `betaEvent_aux` argument to the `simjm` call.
 
@@ -75,20 +76,22 @@ simdat3 <- simjm()
 simdat4 <- simjm(assoc = "etaslope", betaEvent_assoc = 0.3)
 ```
 
-And here is an example of the resulting data frame:
+And here is an example of the resulting data frames:
 
 ```{r simjm_dataframe}
-simdat2[1:15,]
+simdat2$Event %>% dplyr::filter(id %in% 1:2)
+simdat2$Long1 %>% dplyr::filter(id %in% 1:2)
+simdat2$Long2 %>% dplyr::filter(id %in% 1:2)
 ```
 
 ## Bug Reports
 
-If you find any bugs, please report them via email to [Sam Brilleman](mailto:sam.brilleman@monash.edu).
+If you find any bugs, please [file an issue](https://github.com/sambrilleman/simjm/issues) or report them via email to [Sam Brilleman](mailto:sam.brilleman@monash.edu).
 
 ## References
 
-1. Crowther MJ, and Lambert PC. Simulating biologically plausible complex survival data. *Statistics in Medicine* 2013; **32**, 4118–4134. doi:10.1002/sim.5823
+1. Crowther MJ, and Lambert PC. Simulating biologically plausible complex survival data. *Statistics in Medicine* 2013; **32**, 4118--4134. doi:10.1002/sim.5823
 
-2. Bender R, Augustin T, and Blettner M. Generating survival times to simulate Cox proportional hazards models. *Statistics in Medicine* 2005; **24(11)**, 1713-1723.
+2. Bender R, Augustin T, and Blettner M. Generating survival times to simulate Cox proportional hazards models. *Statistics in Medicine* 2005; **24(11)**, 1713--1723.
 
 3. Brent R. (1973) *Algorithms for Minimization without Derivatives*. Englewood Cliffs, NJ: Prentice-Hall.
